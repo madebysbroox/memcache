@@ -523,6 +523,91 @@ else
     fail "Hardcoded colors found (dark/light mode issue)"
 fi
 
+# ── 13. Sprint 7: Outlook integration & performance ────────────────────
+echo ""
+echo "[13] Sprint 7 Outlook integration & performance"
+
+OUTLOOK="$ROOT/MenuBarMeetings/Services/OutlookCalendarProvider.swift"
+
+if [ -f "$OUTLOOK" ]; then
+    pass "OutlookCalendarProvider.swift exists"
+else
+    fail "OutlookCalendarProvider.swift missing"
+fi
+
+if grep -q 'CalendarProvider' "$OUTLOOK" && grep -q 'Microsoft Graph' "$OUTLOOK"; then
+    pass "OutlookCalendarProvider conforms to protocol and uses Graph API"
+else
+    fail "OutlookCalendarProvider not properly implemented"
+fi
+
+if grep -q 'PKCE\|codeVerifier\|codeChallenge' "$OUTLOOK"; then
+    pass "OutlookCalendarProvider uses PKCE OAuth flow"
+else
+    fail "OutlookCalendarProvider missing PKCE"
+fi
+
+if grep -q 'graph.microsoft.com' "$OUTLOOK"; then
+    pass "OutlookCalendarProvider calls Microsoft Graph API"
+else
+    fail "OutlookCalendarProvider missing Graph API URL"
+fi
+
+if grep -q 'signOut' "$OUTLOOK"; then
+    pass "OutlookCalendarProvider has signOut()"
+else
+    fail "OutlookCalendarProvider missing signOut()"
+fi
+
+if grep -q 'refreshAccessToken\|refresh_token' "$OUTLOOK"; then
+    pass "OutlookCalendarProvider supports token refresh"
+else
+    fail "OutlookCalendarProvider missing token refresh"
+fi
+
+if grep -q 'outlookProvider' "$SVC"; then
+    pass "CalendarService registers outlookProvider"
+else
+    fail "CalendarService missing outlookProvider"
+fi
+
+if grep -q 'connectOutlook' "$SVC"; then
+    pass "CalendarService has connectOutlook()"
+else
+    fail "CalendarService missing connectOutlook()"
+fi
+
+if grep -q 'disconnectOutlook' "$SVC"; then
+    pass "CalendarService has disconnectOutlook()"
+else
+    fail "CalendarService missing disconnectOutlook()"
+fi
+
+if grep -q 'Outlook' "$PREFS"; then
+    pass "PreferencesView shows Outlook provider row"
+else
+    fail "PreferencesView missing Outlook row"
+fi
+
+# Performance: caching & configurable interval
+if grep -q 'cacheInterval\|lastRefreshDate' "$SVC"; then
+    pass "CalendarService has event caching"
+else
+    fail "CalendarService missing event caching"
+fi
+
+if grep -q 'pollInterval' "$SVC" && grep -q 'UserDefaults' "$SVC"; then
+    pass "CalendarService has configurable poll interval (persisted)"
+else
+    fail "CalendarService missing configurable poll interval"
+fi
+
+if grep -q 'pollInterval\|Update interval' "$PREFS"; then
+    pass "PreferencesView has update interval picker"
+else
+    fail "PreferencesView missing update interval picker"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

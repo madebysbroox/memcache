@@ -10,9 +10,10 @@ final class CalendarService: ObservableObject {
 
     let appleProvider = AppleCalendarProvider()
     let googleProvider = GoogleCalendarProvider()
+    let outlookProvider = OutlookCalendarProvider()
 
     /// All registered providers.
-    var providers: [CalendarProvider] { [appleProvider, googleProvider] }
+    var providers: [CalendarProvider] { [appleProvider, googleProvider, outlookProvider] }
 
     /// Providers that are currently authorized and contributing events.
     var enabledProviders: [CalendarProvider] {
@@ -33,7 +34,20 @@ final class CalendarService: ObservableObject {
     }
 
     private var pollTimer: Timer?
-    private let pollInterval: TimeInterval = 60
+
+    /// User-configurable poll interval (seconds). Persisted via UserDefaults.
+    @Published var pollInterval: TimeInterval = UserDefaults.standard.double(forKey: "pollInterval").clamped(to: 30...600, default: 60) {
+        didSet {
+            UserDefaults.standard.set(pollInterval, forKey: "pollInterval")
+            startPolling() // restart timer with new interval
+        }
+    }
+
+    /// Minimum time (seconds) between API fetches to reduce redundant calls.
+    private let cacheInterval: TimeInterval = 15
+
+    /// Tracks when the last successful refresh completed.
+    private var lastRefreshDate: Date?
 
     init() {}
 
@@ -68,9 +82,31 @@ final class CalendarService: ObservableObject {
         }
     }
 
+    /// Initiate Microsoft Outlook OAuth sign-in.
+    func connectOutlook() {
+        Task { @MainActor in
+            await outlookProvider.requestAccess()
+            await refresh()
+        }
+    }
+
+    /// Disconnect Microsoft Outlook.
+    func disconnectOutlook() {
+        outlookProvider.signOut()
+        Task { @MainActor in
+            await refresh()
+        }
+    }
+
     /// Fetch events from all enabled providers and merge.
+    /// Uses a simple cache: skips fetch if last refresh was within `cacheInterval`.
     @MainActor
     func refresh() async {
+        let now = Date()
+        if let lastRefresh = lastRefreshDate, now.timeIntervalSince(lastRefresh) < cacheInterval {
+            return // cached data still valid
+        }
+
         isLoading = true
         var allMeetings: [Meeting] = []
 
@@ -80,7 +116,15 @@ final class CalendarService: ObservableObject {
         }
 
         meetings = allMeetings.sorted { $0.startDate < $1.startDate }
+        lastRefreshDate = now
         isLoading = false
+    }
+
+    /// Force-refresh ignoring the cache (e.g. after connecting a new provider).
+    @MainActor
+    func forceRefresh() async {
+        lastRefreshDate = nil
+        await refresh()
     }
 
     // MARK: - Polling
@@ -99,5 +143,16 @@ final class CalendarService: ObservableObject {
     /// The next upcoming (non-past, non-all-day) meeting across all providers.
     var nextMeeting: Meeting? {
         meetings.first { !$0.isPast && !$0.isAllDay }
+    }
+}
+
+// MARK: - Double clamped helper
+
+private extension Double {
+    /// Returns `self` if within `range`, otherwise the default value.
+    /// Treats 0 (UserDefaults unset) as "use default".
+    func clamped(to range: ClosedRange<Double>, default defaultValue: Double) -> Double {
+        if self == 0 { return defaultValue }
+        return Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }

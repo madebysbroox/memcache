@@ -30,6 +30,37 @@ struct PreferencesView: View {
                 disconnectAction: { calendarService.disconnectGoogle() }
             )
 
+            Divider()
+
+            // Microsoft Outlook
+            ProviderRow(
+                name: "Microsoft Outlook",
+                icon: "envelope",
+                status: calendarService.outlookProvider.status,
+                connectAction: { calendarService.connectOutlook() },
+                disconnectAction: { calendarService.disconnectOutlook() }
+            )
+
+            Divider()
+
+            // Advanced settings
+            Text("Advanced")
+                .font(.title2.weight(.semibold))
+
+            HStack {
+                Text("Update interval")
+                Spacer()
+                Picker("", selection: $calendarService.pollInterval) {
+                    Text("30 seconds").tag(30.0 as TimeInterval)
+                    Text("1 minute").tag(60.0 as TimeInterval)
+                    Text("2 minutes").tag(120.0 as TimeInterval)
+                    Text("5 minutes").tag(300.0 as TimeInterval)
+                    Text("10 minutes").tag(600.0 as TimeInterval)
+                }
+                .labelsHidden()
+                .frame(width: 140)
+            }
+
             Spacer()
 
             HStack {
@@ -39,7 +70,7 @@ struct PreferencesView: View {
             }
         }
         .padding(20)
-        .frame(width: 360, height: 280)
+        .frame(width: 360, height: 400)
     }
 }
 

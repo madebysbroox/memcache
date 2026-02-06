@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+#
+# Structural validation test for MenuBarMeetings scaffolding (Sprint 1).
+# Verifies directory layout, required files, Info.plist config, and
+# Swift source conventions without needing a Swift compiler.
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+PASS=0
+FAIL=0
+
+pass() { PASS=$((PASS + 1)); echo "  PASS: $1"; }
+fail() { FAIL=$((FAIL + 1)); echo "  FAIL: $1"; }
+
+echo "=== MenuBarMeetings Scaffolding Tests ==="
+echo ""
+
+# ── 1. Directory layout ──────────────────────────────────────────────
+echo "[1] Directory layout"
+
+for dir in \
+    MenuBarMeetings/App \
+    MenuBarMeetings/Views \
+    MenuBarMeetings/Models \
+    MenuBarMeetings/Services \
+    MenuBarMeetings/Resources/Assets.xcassets/AppIcon.appiconset \
+    MenuBarMeetings/Resources/Assets.xcassets/MenuBarIcon.imageset; do
+    if [ -d "$ROOT/$dir" ]; then
+        pass "$dir/ exists"
+    else
+        fail "$dir/ missing"
+    fi
+done
+
+# ── 2. Required source files ─────────────────────────────────────────
+echo ""
+echo "[2] Required source files"
+
+for file in \
+    Package.swift \
+    MenuBarMeetings/Info.plist \
+    MenuBarMeetings/App/MenuBarMeetingsApp.swift \
+    MenuBarMeetings/Views/MenuBarView.swift \
+    MenuBarMeetings/Views/PopupView.swift \
+    MenuBarMeetings/Resources/Assets.xcassets/Contents.json \
+    MenuBarMeetings/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json \
+    MenuBarMeetings/Resources/Assets.xcassets/MenuBarIcon.imageset/Contents.json; do
+    if [ -f "$ROOT/$file" ]; then
+        pass "$file exists"
+    else
+        fail "$file missing"
+    fi
+done
+
+# ── 3. Info.plist checks ─────────────────────────────────────────────
+echo ""
+echo "[3] Info.plist configuration"
+
+PLIST="$ROOT/MenuBarMeetings/Info.plist"
+
+if grep -q '<key>LSUIElement</key>' "$PLIST" && grep -A1 '<key>LSUIElement</key>' "$PLIST" | grep -q '<true/>'; then
+    pass "LSUIElement is true (no Dock icon)"
+else
+    fail "LSUIElement not set to true"
+fi
+
+if grep -q 'com.memcache.menubar-meetings' "$PLIST"; then
+    pass "Bundle identifier is com.memcache.menubar-meetings"
+else
+    fail "Bundle identifier incorrect"
+fi
+
+if grep -q '<string>13.0</string>' "$PLIST"; then
+    pass "Minimum macOS version is 13.0"
+else
+    fail "Minimum macOS version not set to 13.0"
+fi
+
+# ── 4. Package.swift checks ──────────────────────────────────────────
+echo ""
+echo "[4] Package.swift configuration"
+
+PKG="$ROOT/Package.swift"
+
+if grep -q '\.macOS(.v13)' "$PKG"; then
+    pass "Platform target is macOS 13+"
+else
+    fail "Platform target not set to macOS 13"
+fi
+
+if grep -q 'executableTarget' "$PKG"; then
+    pass "Executable target defined"
+else
+    fail "No executable target"
+fi
+
+# ── 5. Swift source conventions ───────────────────────────────────────
+echo ""
+echo "[5] Swift source conventions"
+
+APP="$ROOT/MenuBarMeetings/App/MenuBarMeetingsApp.swift"
+
+if grep -q '@main' "$APP"; then
+    pass "@main entry point declared"
+else
+    fail "@main entry point missing"
+fi
+
+if grep -q 'MenuBarExtra' "$APP"; then
+    pass "MenuBarExtra API used"
+else
+    fail "MenuBarExtra API not found"
+fi
+
+if grep -q 'NSApplicationDelegateAdaptor' "$APP"; then
+    pass "AppDelegate adaptor wired up"
+else
+    fail "AppDelegate adaptor missing"
+fi
+
+if grep -q '\.window' "$APP"; then
+    pass "MenuBarExtra style set to .window"
+else
+    fail "MenuBarExtra style not set to .window"
+fi
+
+POPUP="$ROOT/MenuBarMeetings/Views/PopupView.swift"
+
+if grep -q 'NSApplication.shared.terminate' "$POPUP"; then
+    pass "Quit button calls terminate"
+else
+    fail "Quit action missing in PopupView"
+fi
+
+if grep -q 'frame(width: 320, height: 400)' "$POPUP"; then
+    pass "Popup frame is 320x400"
+else
+    fail "Popup frame dimensions incorrect"
+fi
+
+LABEL="$ROOT/MenuBarMeetings/Views/MenuBarView.swift"
+
+if grep -q 'No meetings today' "$LABEL"; then
+    pass "Placeholder text present in MenuBarView"
+else
+    fail "Placeholder text missing in MenuBarView"
+fi
+
+# ── Summary ───────────────────────────────────────────────────────────
+echo ""
+echo "=== Results: $PASS passed, $FAIL failed ==="
+
+if [ "$FAIL" -gt 0 ]; then
+    exit 1
+fi

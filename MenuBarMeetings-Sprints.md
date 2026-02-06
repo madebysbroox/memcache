@@ -13,23 +13,83 @@ Development roadmap for the Mac menu bar meeting reminder application, structure
 
 **Goal**: Get basic app structure with minimal menu bar presence
 
-### Issues/Tasks
-- [ ] **Setup-001**: Project scaffolding (Xcode project, basic app structure)
-- [ ] **Setup-002**: Menu bar item creation and basic lifecycle
-- [ ] **Setup-003**: App icon and basic branding assets
-- [ ] **Core-001**: Menu bar text display system (static text first)
-- [ ] **Core-002**: Basic popup window framework (empty window)
+### Step 1 — Xcode Project & Directory Layout
+
+Create a new Xcode project targeting macOS with the following settings and structure:
+
+- [ ] **Setup-001a**: Create Xcode project
+  - Product name: `MenuBarMeetings`
+  - Interface: **SwiftUI**, Language: **Swift**
+  - Minimum deployment target: **macOS 13.0** (Ventura — required for `MenuBarExtra`)
+  - Bundle identifier: `com.memcache.menubar-meetings`
+  - Uncheck "Include Tests" for now (added in Sprint 8 / Tech Debt)
+
+- [ ] **Setup-001b**: Configure as menu-bar-only app (no Dock icon)
+  - Set `LSUIElement` = `YES` in `Info.plist` (Application is agent)
+  - This hides the app from the Dock so it lives exclusively in the menu bar
+
+- [ ] **Setup-001c**: Establish source directory layout
+  ```
+  MenuBarMeetings/
+  ├── App/
+  │   └── MenuBarMeetingsApp.swift    # @main entry point
+  ├── Views/
+  │   ├── MenuBarView.swift           # Menu bar label content
+  │   └── PopupView.swift             # Popover daily-schedule shell
+  ├── Models/                         # (empty — populated in Sprint 2)
+  ├── Services/                       # (empty — populated in Sprint 2)
+  ├── Resources/
+  │   └── Assets.xcassets             # App icon & menu bar icon
+  └── Info.plist
+  ```
+
+### Step 2 — App Entry Point & MenuBarExtra
+
+- [ ] **Setup-002a**: Implement `MenuBarMeetingsApp.swift` using the SwiftUI `MenuBarExtra` API
+  - Declare `@main struct MenuBarMeetingsApp: App`
+  - Use `MenuBarExtra("MenuBar Meetings", systemImage: "calendar")` for the menu bar item
+  - Set the `MenuBarExtra` style to `.window` so clicking opens a popover panel
+  - The body of the `MenuBarExtra` renders `PopupView()`
+
+- [ ] **Setup-002b**: Add an `AppDelegate` via `@NSApplicationDelegateAdaptor`
+  - Handle `applicationDidFinishLaunching` for any one-time setup
+  - Handle `applicationWillTerminate` for clean shutdown
+
+### Step 3 — Static Menu Bar Label
+
+- [ ] **Core-001**: Create `MenuBarView.swift`
+  - Display a static placeholder string: `"No meetings today"`
+  - Use `Label` or `Text` with an SF Symbol icon (`calendar`)
+  - This view will be swapped for live calendar data in Sprint 2
+
+### Step 4 — Empty Popup / Popover Window
+
+- [ ] **Core-002**: Create `PopupView.swift`
+  - Render a fixed-size popover (width: ~320 pt, height: ~400 pt)
+  - Show a centered placeholder: `"Your schedule will appear here"`
+  - Add a **Quit** button at the bottom (`NSApplication.shared.terminate(nil)`)
+  - Add a disabled **Preferences** button (stub for Sprint 5)
+
+### Step 5 — App Icon & Menu Bar Icon
+
+- [ ] **Setup-003a**: Add a placeholder `AppIcon` set inside `Assets.xcassets`
+  - Provide at minimum a 512×512 @1x and 1024×1024 @2x icon (can be a simple calendar glyph for now)
+- [ ] **Setup-003b**: Confirm the SF Symbol `calendar` renders correctly in the menu bar at all display scales
+  - Fallback: create a custom 18×18 @1x / 36×36 @2x template image named `MenuBarIcon` in the asset catalog and reference it via `MenuBarExtra("MenuBar Meetings", image: "MenuBarIcon")`
 
 ### Deliverables
-- App launches and shows in menu bar
-- Clicking menu bar item opens/closes empty popup
-- Basic app lifecycle (quit, preferences stub)
+- App launches and shows a calendar icon + label in the menu bar
+- Clicking the menu bar item opens/closes a popover with placeholder content
+- App has no Dock icon (`LSUIElement`)
+- Basic app lifecycle: launches cleanly, quits via popover button
 
 ### Definition of Done
-- [ ] App can be launched from Xcode
-- [ ] Menu bar item appears and is clickable
-- [ ] Popup window opens/closes properly
-- [ ] App can be quit cleanly
+- [ ] App can be built and launched from Xcode with zero warnings
+- [ ] Menu bar item appears with an icon and is clickable
+- [ ] Popover window opens/closes properly on click
+- [ ] App does **not** appear in the Dock
+- [ ] App can be quit cleanly via the popover Quit button
+- [ ] Source files follow the directory layout above
 
 ---
 

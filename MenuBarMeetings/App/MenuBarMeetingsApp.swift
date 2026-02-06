@@ -3,10 +3,14 @@ import SwiftUI
 @main
 struct MenuBarMeetingsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var calendarService = CalendarService()
 
     var body: some Scene {
-        MenuBarExtra("MenuBar Meetings", systemImage: "calendar") {
+        MenuBarExtra {
             PopupView()
+                .environmentObject(calendarService)
+        } label: {
+            MenuBarView(nextMeeting: calendarService.nextMeeting)
         }
         .menuBarExtraStyle(.window)
     }
@@ -14,7 +18,8 @@ struct MenuBarMeetingsApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // One-time setup will go here (e.g. calendar permissions in Sprint 2)
+        // CalendarService is owned by the SwiftUI App struct;
+        // permission request is triggered from PopupView on first launch.
     }
 
     func applicationWillTerminate(_ notification: Notification) {

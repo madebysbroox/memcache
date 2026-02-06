@@ -97,23 +97,60 @@ Create a new Xcode project targeting macOS with the following settings and struc
 
 **Goal**: Connect to Apple Calendar and display basic meeting data
 
-### Issues/Tasks
-- [ ] **Calendar-001**: EventKit framework integration
-- [ ] **Calendar-002**: Calendar permissions handling
-- [ ] **Calendar-003**: Fetch today's events from default calendar
-- [ ] **Data-001**: Meeting data model (Event struct/class)
-- [ ] **Display-001**: Show next meeting in menu bar (basic format)
+### Step 1 — Meeting Data Model
+
+- [x] **Data-001**: Create `Models/Meeting.swift`
+  - `struct Meeting: Identifiable` with `id`, `title`, `startDate`, `endDate`, `isAllDay`, `location`, `url`, `calendarName`
+  - Computed properties: `duration`, `isOngoing`, `isPast`, `formattedStartTime`, `formattedDuration`, `menuBarLabel`
+  - Menu bar format: `"2:30 PM · Standup"`
+
+### Step 2 — CalendarService (EventKit)
+
+- [x] **Calendar-001**: Create `Services/CalendarService.swift`
+  - `ObservableObject` wrapping `EKEventStore`
+  - Publishes `meetings: [Meeting]`, `authorizationStatus`, `errorMessage`
+
+- [x] **Calendar-002**: Permission handling
+  - `requestAccess()` uses `requestFullAccessToEvents` on macOS 14+ with fallback to `requestAccess(to:)` on macOS 13
+  - Handles granted / denied / error states and updates `authorizationStatus`
+  - Denied state shows a user-friendly message directing to System Settings
+
+- [x] **Calendar-003**: Fetch today's events
+  - `fetchTodaysMeetings()` queries EventKit for start-of-day → end-of-day
+  - Maps `EKEvent` → `Meeting`, sorted chronologically
+  - `nextMeeting` computed property returns the first non-past, non-all-day event
+
+### Step 3 — Auto-Refresh
+
+- [x] **Refresh**: Calendar change observation + polling
+  - Subscribes to `EKEventStoreChanged` notification (debounced 1s) for external edits
+  - 60-second polling timer keeps the "next meeting" current as time passes
+
+### Step 4 — Wire Into Views
+
+- [x] **Display-001**: Update `MenuBarMeetingsApp.swift`
+  - `@StateObject` for `CalendarService`, passed via `environmentObject` to popup
+  - `MenuBarView` receives `nextMeeting` and displays its `menuBarLabel`
+  - `PopupView` auto-triggers `requestAccess()` on first appear when status is `.notDetermined`
+
+- [x] **Display-002**: Update `PopupView.swift`
+  - Header shows today's date (`"Thursday, Feb 6"`)
+  - Authorized + meetings → scrollable `MeetingRow` list (time, title, duration)
+  - Authorized + empty → `"No meetings today"` placeholder
+  - Not determined → `"Requesting calendar access…"`
+  - Denied → error message with System Settings guidance
 
 ### Deliverables
-- Read events from Apple Calendar
-- Display next meeting time + title in menu bar
-- Handle permission requests gracefully
+- Read events from Apple Calendar via EventKit
+- Display next meeting time + title in menu bar (`"2:30 PM · Standup"`)
+- Handle permission requests gracefully with user-facing messages
+- Auto-refresh on calendar changes and 60-second polling
 
 ### Definition of Done
-- [ ] App requests and handles Calendar permissions
-- [ ] Can fetch today's calendar events
-- [ ] Menu bar displays next meeting (format: "2:30 PM • Meeting Title")
-- [ ] Updates when calendar changes (basic polling)
+- [ ] App requests and handles Calendar permissions (requires macOS)
+- [ ] Can fetch today's calendar events (requires macOS)
+- [x] Menu bar displays next meeting (format: `"h:mm a · Title"`)
+- [x] Updates when calendar changes (EKEventStoreChanged + 60s polling)
 
 ---
 

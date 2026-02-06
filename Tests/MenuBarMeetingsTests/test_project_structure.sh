@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Structural validation test for MenuBarMeetings scaffolding (Sprint 1).
+# Structural validation test for MenuBarMeetings (Sprint 1 + Sprint 2).
 # Verifies directory layout, required files, Info.plist config, and
 # Swift source conventions without needing a Swift compiler.
 
@@ -43,6 +43,8 @@ for file in \
     MenuBarMeetings/App/MenuBarMeetingsApp.swift \
     MenuBarMeetings/Views/MenuBarView.swift \
     MenuBarMeetings/Views/PopupView.swift \
+    MenuBarMeetings/Models/Meeting.swift \
+    MenuBarMeetings/Services/CalendarService.swift \
     MenuBarMeetings/Resources/Assets.xcassets/Contents.json \
     MenuBarMeetings/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json \
     MenuBarMeetings/Resources/Assets.xcassets/MenuBarIcon.imageset/Contents.json; do
@@ -141,10 +143,136 @@ fi
 
 LABEL="$ROOT/MenuBarMeetings/Views/MenuBarView.swift"
 
-if grep -q 'No meetings today' "$LABEL"; then
-    pass "Placeholder text present in MenuBarView"
+if grep -q 'No meetings' "$LABEL"; then
+    pass "Fallback text present in MenuBarView"
 else
-    fail "Placeholder text missing in MenuBarView"
+    fail "Fallback text missing in MenuBarView"
+fi
+
+# ── 6. Sprint 2: Meeting model ───────────────────────────────────────
+echo ""
+echo "[6] Meeting data model"
+
+MODEL="$ROOT/MenuBarMeetings/Models/Meeting.swift"
+
+if grep -q 'struct Meeting: Identifiable' "$MODEL"; then
+    pass "Meeting struct conforms to Identifiable"
+else
+    fail "Meeting struct missing or not Identifiable"
+fi
+
+for prop in startDate endDate isAllDay title calendarName; do
+    if grep -q "$prop" "$MODEL"; then
+        pass "Meeting has '$prop' property"
+    else
+        fail "Meeting missing '$prop' property"
+    fi
+done
+
+if grep -q 'menuBarLabel' "$MODEL"; then
+    pass "Meeting has menuBarLabel computed property"
+else
+    fail "Meeting missing menuBarLabel"
+fi
+
+if grep -q 'formattedStartTime' "$MODEL"; then
+    pass "Meeting has formattedStartTime"
+else
+    fail "Meeting missing formattedStartTime"
+fi
+
+if grep -q 'formattedDuration' "$MODEL"; then
+    pass "Meeting has formattedDuration"
+else
+    fail "Meeting missing formattedDuration"
+fi
+
+# ── 7. Sprint 2: CalendarService ─────────────────────────────────────
+echo ""
+echo "[7] CalendarService"
+
+SVC="$ROOT/MenuBarMeetings/Services/CalendarService.swift"
+
+if grep -q 'import EventKit' "$SVC"; then
+    pass "CalendarService imports EventKit"
+else
+    fail "CalendarService does not import EventKit"
+fi
+
+if grep -q 'ObservableObject' "$SVC"; then
+    pass "CalendarService is ObservableObject"
+else
+    fail "CalendarService is not ObservableObject"
+fi
+
+if grep -q 'requestAccess' "$SVC"; then
+    pass "CalendarService has requestAccess()"
+else
+    fail "CalendarService missing requestAccess()"
+fi
+
+if grep -q 'fetchTodaysMeetings' "$SVC"; then
+    pass "CalendarService has fetchTodaysMeetings()"
+else
+    fail "CalendarService missing fetchTodaysMeetings()"
+fi
+
+if grep -q 'EKEventStoreChanged' "$SVC"; then
+    pass "CalendarService observes EKEventStoreChanged"
+else
+    fail "CalendarService not observing store changes"
+fi
+
+if grep -q 'Timer.scheduledTimer' "$SVC"; then
+    pass "CalendarService has polling timer"
+else
+    fail "CalendarService missing polling timer"
+fi
+
+if grep -q 'nextMeeting' "$SVC"; then
+    pass "CalendarService exposes nextMeeting"
+else
+    fail "CalendarService missing nextMeeting"
+fi
+
+# ── 8. Sprint 2: View integration ────────────────────────────────────
+echo ""
+echo "[8] Sprint 2 view integration"
+
+if grep -q 'CalendarService' "$APP"; then
+    pass "App entry point uses CalendarService"
+else
+    fail "App entry point does not reference CalendarService"
+fi
+
+if grep -q 'environmentObject' "$APP"; then
+    pass "CalendarService passed as environmentObject"
+else
+    fail "environmentObject not used in App"
+fi
+
+if grep -q 'nextMeeting' "$LABEL"; then
+    pass "MenuBarView receives nextMeeting"
+else
+    fail "MenuBarView does not use nextMeeting"
+fi
+
+if grep -q 'EnvironmentObject' "$POPUP"; then
+    pass "PopupView reads CalendarService from environment"
+else
+    fail "PopupView missing EnvironmentObject"
+fi
+
+if grep -q 'MeetingRow' "$POPUP"; then
+    pass "PopupView renders MeetingRow components"
+else
+    fail "PopupView missing MeetingRow"
+fi
+
+if grep -q 'requestAccess' "$POPUP"; then
+    pass "PopupView triggers permission request on appear"
+else
+    fail "PopupView does not trigger requestAccess"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────

@@ -1,8 +1,14 @@
 import SwiftUI
 
-/// Static menu bar label — replaced with live calendar data in Sprint 2.
+/// Renders the menu bar label. Shows the next meeting or a fallback.
 struct MenuBarView: View {
+    let nextMeeting: Meeting?
+
     var body: some View {
-        Label("No meetings today", systemImage: "calendar")
+        if let meeting = nextMeeting {
+            Label(meeting.menuBarLabel, systemImage: "calendar")
+        } else {
+            Label("No meetings", systemImage: "calendar")
+        }
     }
 }

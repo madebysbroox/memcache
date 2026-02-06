@@ -1,4 +1,4 @@
-# MemCache - Mac Menu Bar Meeting Reminder
+# MemCache - Mac Menu Bar Meeting Reminder For My Old Age
 
 A minimal, elegant Mac menu bar application that keeps your upcoming meetings visible and accessible without cluttering your workflow.
 

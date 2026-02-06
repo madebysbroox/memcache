@@ -75,6 +75,96 @@ final class MeetingTests: XCTestCase {
         XCTAssertFalse(meeting.isOngoing)
     }
 
+    // MARK: - Urgency level (Sprint 4)
+
+    func testUrgencyNoneForDistantMeeting() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(45 * 60),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.urgencyLevel, .none)
+    }
+
+    func testUrgencyLowForMeetingIn20Min() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(20 * 60),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.urgencyLevel, .low)
+    }
+
+    func testUrgencyMediumForMeetingIn10Min() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(10 * 60),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.urgencyLevel, .medium)
+    }
+
+    func testUrgencyHighForMeetingIn3Min() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(3 * 60),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.urgencyLevel, .high)
+    }
+
+    func testUrgencyOngoingForCurrentMeeting() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(-600),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.urgencyLevel, .ongoing)
+    }
+
+    // MARK: - Countdown label (Sprint 4)
+
+    func testCountdownLabelForOngoing() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(-300),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.countdownLabel, "now")
+    }
+
+    func testCountdownLabelForMinutesAway() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(12 * 60 + 30),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.countdownLabel, "in 12m")
+    }
+
+    func testCountdownLabelForHoursAway() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(90 * 60 + 30),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.countdownLabel, "in 1h 30m")
+    }
+
+    // MARK: - Smart title truncation (Sprint 4)
+
+    func testTruncatedTitleShortTitleUnchanged() {
+        let meeting = makeMeeting(title: "Standup")
+        XCTAssertEqual(meeting.truncatedTitle(maxLength: 20), "Standup")
+    }
+
+    func testTruncatedTitleDropsFillerWords() {
+        let meeting = makeMeeting(title: "Review of the Q4 Budget and Forecast")
+        let result = meeting.truncatedTitle(maxLength: 25)
+        XCTAssertFalse(result.contains("the"))
+        XCTAssertFalse(result.contains(" of "))
+        XCTAssertTrue(result.count <= 25)
+    }
+
+    func testTruncatedTitleHardTruncatesLongTitle() {
+        let meeting = makeMeeting(title: "Extremely Long Meeting Title That Goes Way Beyond")
+        let result = meeting.truncatedTitle(maxLength: 15)
+        XCTAssertTrue(result.count <= 15)
+        XCTAssertTrue(result.hasSuffix("…"))
+    }
+
     // MARK: - Helpers
 
     private func makeMeeting(

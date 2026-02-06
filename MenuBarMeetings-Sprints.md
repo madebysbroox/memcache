@@ -211,24 +211,43 @@ Create a new Xcode project targeting macOS with the following settings and struc
 
 **Goal**: Improve menu bar text and basic urgency indicators
 
-### Issues/Tasks
-- [ ] **Algorithm-001**: Smart title truncation algorithm
-- [ ] **Display-003**: Dynamic menu bar text sizing
-- [ ] **Urgency-001**: Time-until-meeting calculation
-- [ ] **Urgency-002**: Basic urgency indicator (color change <30min)
-- [ ] **Polish-001**: Handle edge cases (no meetings, past meetings)
+### Step 1 — Urgency System
+
+- [x] **Urgency-001**: `UrgencyLevel` enum (`none`, `low`, `medium`, `high`, `ongoing`)
+  - Thresholds: >30 min → none, 15–30 → low, 5–15 → medium, <5 → high
+- [x] **Urgency-002**: `minutesUntilStart` and `urgencyLevel` on `Meeting`
+- [x] **Urgency-003**: `countdownLabel` — human-readable countdown (`"in 12m"`, `"in 1h 30m"`, `"now"`)
+
+### Step 2 — Smart Title Truncation
+
+- [x] **Algorithm-001**: `truncatedTitle(maxLength:)` on `Meeting`
+  - Returns title unchanged if within budget
+  - Drops filler words (the, a, an, and, with, for, to, of, in, on, at)
+  - Hard-truncates with `…` if still over budget
+
+### Step 3 — Urgency-Aware Menu Bar
+
+- [x] **Display-003**: Rewrite `MenuBarView` with urgency logic
+  - `> 30 min` → `"2:30 PM · Standup"` (default icon)
+  - `15–30 min` → `"in Xm · Standup"` (orange icon)
+  - `5–15 min` → `"in Xm · Standup"` (red icon)
+  - `< 5 min` → `"in Xm · Standup"` (red icon, `calendar.badge.exclamationmark`)
+  - `ongoing` → `"now · Standup"` (blue icon, `calendar.badge.clock`)
+  - No meeting → `"No meetings"` (default icon)
+- [x] **Polish-001**: Past meetings excluded by `CalendarService.nextMeeting`
 
 ### Deliverables
-- Menu bar intelligently shows appropriate meeting info
-- Visual indicator when meeting is approaching
-- Handles various schedule scenarios gracefully
+- Menu bar shows smart countdown as meetings approach
+- Urgency-colored icon shifts through orange → red → badge
+- Titles truncated intelligently to fit menu bar space
+- Ongoing meetings indicated with "now" and clock badge
 
 ### Definition of Done
-- [ ] Meeting titles truncate intelligently (keep important words)
-- [ ] Menu bar text adapts to available space
-- [ ] Color/style changes when meeting <30 minutes away
-- [ ] Shows "No meetings" or next upcoming when appropriate
-- [ ] Past meetings don't show as "next"
+- [x] Meeting titles truncate intelligently (drop filler words, then hard-truncate)
+- [x] Menu bar text switches from time to countdown within 30 minutes
+- [x] Color/icon changes at 30, 15, and 5 minute thresholds
+- [x] Shows "No meetings" when no upcoming events
+- [x] Past meetings excluded via `nextMeeting` filter
 
 ---
 

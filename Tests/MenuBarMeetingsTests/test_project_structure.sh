@@ -327,6 +327,70 @@ else
     fail "MeetingRow does not highlight ongoing meetings"
 fi
 
+# ── 10. Sprint 4: Smart menu bar & urgency ────────────────────────────
+echo ""
+echo "[10] Sprint 4 smart menu bar & urgency"
+
+if grep -q 'UrgencyLevel' "$MODEL"; then
+    pass "UrgencyLevel enum defined"
+else
+    fail "UrgencyLevel enum missing"
+fi
+
+if grep -q 'urgencyLevel' "$MODEL"; then
+    pass "Meeting has urgencyLevel property"
+else
+    fail "Meeting missing urgencyLevel"
+fi
+
+if grep -q 'minutesUntilStart' "$MODEL"; then
+    pass "Meeting has minutesUntilStart"
+else
+    fail "Meeting missing minutesUntilStart"
+fi
+
+if grep -q 'countdownLabel' "$MODEL"; then
+    pass "Meeting has countdownLabel"
+else
+    fail "Meeting missing countdownLabel"
+fi
+
+if grep -q 'truncatedTitle' "$MODEL"; then
+    pass "Meeting has truncatedTitle()"
+else
+    fail "Meeting missing truncatedTitle()"
+fi
+
+if grep -q 'urgencyLevel' "$LABEL"; then
+    pass "MenuBarView uses urgencyLevel"
+else
+    fail "MenuBarView does not use urgencyLevel"
+fi
+
+if grep -q 'countdownLabel' "$LABEL"; then
+    pass "MenuBarView shows countdown"
+else
+    fail "MenuBarView does not show countdown"
+fi
+
+if grep -q 'truncatedTitle' "$LABEL"; then
+    pass "MenuBarView uses truncatedTitle"
+else
+    fail "MenuBarView does not use truncatedTitle"
+fi
+
+if grep -q 'iconColor' "$LABEL"; then
+    pass "MenuBarView has urgency-based icon color"
+else
+    fail "MenuBarView missing urgency icon color"
+fi
+
+if grep -q 'calendar.badge' "$LABEL"; then
+    pass "MenuBarView uses urgency-specific SF Symbols"
+else
+    fail "MenuBarView missing urgency SF Symbols"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

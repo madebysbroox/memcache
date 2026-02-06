@@ -165,6 +165,54 @@ final class MeetingTests: XCTestCase {
         XCTAssertTrue(result.hasSuffix("…"))
     }
 
+    // MARK: - Join link detection (Sprint 6)
+
+    func testJoinLinkDetectsZoomURL() {
+        let meeting = makeMeeting(url: URL(string: "https://zoom.us/j/123456789"))
+        XCTAssertNotNil(meeting.joinLink)
+        XCTAssertEqual(meeting.joinLabel, "Join Zoom")
+    }
+
+    func testJoinLinkDetectsTeamsURL() {
+        let meeting = makeMeeting(url: URL(string: "https://teams.microsoft.com/l/meetup-join/abc"))
+        XCTAssertNotNil(meeting.joinLink)
+        XCTAssertEqual(meeting.joinLabel, "Join Teams")
+    }
+
+    func testJoinLinkDetectsGoogleMeetURL() {
+        let meeting = makeMeeting(url: URL(string: "https://meet.google.com/abc-defg-hij"))
+        XCTAssertNotNil(meeting.joinLink)
+        XCTAssertEqual(meeting.joinLabel, "Join Meet")
+    }
+
+    func testJoinLinkNilForNonMeetingURL() {
+        let meeting = makeMeeting(url: URL(string: "https://example.com/notes"))
+        XCTAssertNil(meeting.joinLink)
+        XCTAssertNil(meeting.joinLabel)
+    }
+
+    func testJoinLinkExtractsFromLocation() {
+        let meeting = makeMeeting(location: "Room 4B — https://zoom.us/j/999")
+        XCTAssertNotNil(meeting.joinLink)
+        XCTAssertEqual(meeting.joinLabel, "Join Zoom")
+    }
+
+    // MARK: - Copyable details (Sprint 6)
+
+    func testCopyableDetailsIncludesAllFields() {
+        let meeting = makeMeeting(
+            title: "Standup",
+            startHour: 14, startMinute: 30, durationMinutes: 30,
+            location: "Room A",
+            url: URL(string: "https://zoom.us/j/123")
+        )
+        let details = meeting.copyableDetails
+        XCTAssertTrue(details.contains("Standup"))
+        XCTAssertTrue(details.contains("2:30 PM"))
+        XCTAssertTrue(details.contains("Room A"))
+        XCTAssertTrue(details.contains("zoom.us"))
+    }
+
     // MARK: - Helpers
 
     private func makeMeeting(
@@ -172,7 +220,9 @@ final class MeetingTests: XCTestCase {
         startHour: Int = 10,
         startMinute: Int = 0,
         durationMinutes: Int = 30,
-        isAllDay: Bool = false
+        isAllDay: Bool = false,
+        location: String? = nil,
+        url: URL? = nil
     ) -> Meeting {
         let calendar = Calendar.current
         let start = calendar.date(
@@ -185,8 +235,8 @@ final class MeetingTests: XCTestCase {
             startDate: start,
             endDate: end,
             isAllDay: isAllDay,
-            location: nil,
-            url: nil,
+            location: location,
+            url: url,
             calendarName: "Test",
             calendarColor: .blue
         )

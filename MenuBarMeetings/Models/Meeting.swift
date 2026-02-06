@@ -108,6 +108,64 @@ struct Meeting: Identifiable {
         return "\(formattedStartTime) · \(title)"
     }
 
+    // MARK: - Join links (Sprint 6)
+
+    /// Known meeting URL patterns for Zoom, Teams, Google Meet, Webex.
+    private static let joinPatterns: [(name: String, pattern: String)] = [
+        ("Zoom",   "zoom\\.us/j/"),
+        ("Teams",  "teams\\.microsoft\\.com/l/meetup-join"),
+        ("Meet",   "meet\\.google\\.com/"),
+        ("Webex",  "webex\\.com/")
+    ]
+
+    /// Detected join link from the meeting's URL or location field.
+    var joinLink: URL? {
+        if let url = url, Self.isJoinLink(url.absoluteString) {
+            return url
+        }
+        if let loc = location, let extracted = Self.extractURL(from: loc),
+           Self.isJoinLink(extracted.absoluteString) {
+            return extracted
+        }
+        return nil
+    }
+
+    /// Human-readable label for the join link, e.g. "Join Zoom".
+    var joinLabel: String? {
+        guard let link = joinLink?.absoluteString else { return nil }
+        for (name, pattern) in Self.joinPatterns {
+            if link.range(of: pattern, options: .regularExpression) != nil {
+                return "Join \(name)"
+            }
+        }
+        return "Join Meeting"
+    }
+
+    /// Pasteboard-friendly summary for "Copy details".
+    var copyableDetails: String {
+        var lines = [title]
+        if !isAllDay {
+            lines.append(formattedTimeRange)
+        }
+        if let loc = location, !loc.isEmpty {
+            lines.append(loc)
+        }
+        if let link = joinLink {
+            lines.append(link.absoluteString)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func isJoinLink(_ string: String) -> Bool {
+        joinPatterns.contains { string.range(of: $0.pattern, options: .regularExpression) != nil }
+    }
+
+    private static func extractURL(from text: String) -> URL? {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        return detector.firstMatch(in: text, range: range)?.url
+    }
+
     // MARK: - Shared formatter
 
     private static let timeFormatter: DateFormatter = {

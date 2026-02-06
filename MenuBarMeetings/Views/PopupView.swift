@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct PopupView: View {
     @EnvironmentObject var calendarService: CalendarService
@@ -168,38 +169,74 @@ struct AllDayRow: View {
 struct MeetingRow: View {
     let meeting: Meeting
 
+    @State private var showCopied = false
+
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Circle()
-                .fill(meeting.calendarColor)
-                .frame(width: 8, height: 8)
-                .padding(.top, 5)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 8) {
+                Circle()
+                    .fill(meeting.calendarColor)
+                    .frame(width: 8, height: 8)
+                    .padding(.top, 5)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(meeting.title)
-                    .font(.callout)
-                    .lineLimit(1)
-                    .opacity(meeting.isPast ? 0.5 : 1.0)
-                    .fontWeight(meeting.isOngoing ? .semibold : .regular)
-
-                Text(meeting.formattedTimeRange)
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-
-                if let location = meeting.location, !location.isEmpty {
-                    Text(location)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(meeting.title)
+                        .font(.callout)
                         .lineLimit(1)
+                        .opacity(meeting.isPast ? 0.5 : 1.0)
+                        .fontWeight(meeting.isOngoing ? .semibold : .regular)
+
+                    Text(meeting.formattedTimeRange)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+
+                    if let location = meeting.location, !location.isEmpty {
+                        Text(location)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
                 }
+
+                Spacer()
+
+                Text(meeting.formattedDuration)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 2)
             }
 
-            Spacer()
+            // Action buttons
+            if !meeting.isPast {
+                HStack(spacing: 8) {
+                    if let joinLink = meeting.joinLink, let joinLabel = meeting.joinLabel {
+                        Button {
+                            NSWorkspace.shared.open(joinLink)
+                        } label: {
+                            Label(joinLabel, systemImage: "video")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
 
-            Text(meeting.formattedDuration)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.top, 2)
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(meeting.copyableDetails, forType: .string)
+                        showCopied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            showCopied = false
+                        }
+                    } label: {
+                        Label(showCopied ? "Copied" : "Copy", systemImage: showCopied ? "checkmark" : "doc.on.doc")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .padding(.top, 4)
+                .padding(.leading, 16)
+            }
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 12)

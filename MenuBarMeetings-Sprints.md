@@ -323,24 +323,51 @@ Create a new Xcode project targeting macOS with the following settings and struc
 
 **Goal**: Enhanced urgency indicators and meeting actions
 
-### Issues/Tasks
-- [ ] **Urgency-003**: Text animation for urgent meetings (subtle pulse)
-- [ ] **Urgency-004**: Progressive urgency levels (30min, 15min, 5min)
-- [ ] **Actions-001**: Meeting action buttons in popup (join, copy)
-- [ ] **Actions-002**: Detect and handle meeting join links
-- [ ] **Polish-002**: Dark/light mode theme support
+### Step 1 — Pulse Animation
+
+- [x] **Urgency-003**: Subtle icon pulse for high-urgency meetings (<5 min)
+  - `@State isPulsing` drives opacity animation (1.0 → 0.4)
+  - `.easeInOut(duration: 1.0).repeatForever(autoreverses: true)`
+  - Triggered by `onChange(of: meeting.urgencyLevel)` and `onAppear`
+  - Only active when urgencyLevel == `.high`
+- [x] **Urgency-004**: Progressive urgency levels already implemented in Sprint 4
+  - 4 levels (none/low/medium/high) + ongoing — no additional work needed
+
+### Step 2 — Join Link Detection
+
+- [x] **Actions-002**: `joinLink` and `joinLabel` on `Meeting`
+  - Regex patterns for Zoom, Teams, Google Meet, Webex
+  - Checks `url` property first, then extracts from `location` via `NSDataDetector`
+  - `joinLabel` returns "Join Zoom" / "Join Teams" / "Join Meet" / "Join Meeting"
+
+### Step 3 — Meeting Action Buttons
+
+- [x] **Actions-001**: Join and Copy buttons in `MeetingRow`
+  - **Join** button (video icon) — opens `joinLink` via `NSWorkspace.shared.open`
+  - Only shown when `joinLink` is non-nil and meeting is not past
+  - **Copy** button (doc.on.doc icon) — copies `copyableDetails` to `NSPasteboard`
+  - Brief "Copied" confirmation with checkmark icon (1.5s)
+  - `copyableDetails` includes title, time range, location, join link
+
+### Step 4 — Dark/Light Mode
+
+- [x] **Polish-002**: All views verified to use only semantic colors
+  - `.primary`, `.secondary`, `.tertiary`, `.accentColor`, `.clear`
+  - `.orange`, `.red`, `.blue`, `.green` (system-adaptive)
+  - Zero hardcoded color values — automatically respects system appearance
 
 ### Deliverables
-- Sophisticated urgency system with multiple warning levels
-- Actionable meetings (join Zoom/Teams/Meet links)
-- Proper macOS theme integration
+- Pulse animation on menu bar icon when meeting < 5 minutes away
+- Join buttons for Zoom, Teams, Meet, and Webex links
+- Copy-to-clipboard with visual confirmation
+- Full dark/light mode support via semantic colors
 
 ### Definition of Done
-- [ ] Multiple urgency levels with different visual treatments
-- [ ] Meeting join links are detected and clickable
-- [ ] Copy meeting details functionality
-- [ ] App respects system light/dark mode
-- [ ] Animation is subtle and non-distracting
+- [x] Multiple urgency levels with different visual treatments (Sprint 4 + pulse)
+- [x] Meeting join links detected and clickable (Zoom/Teams/Meet/Webex)
+- [x] Copy meeting details to clipboard with confirmation
+- [x] App respects system light/dark mode (semantic colors only)
+- [x] Animation is subtle and non-distracting (opacity pulse, 1s cycle)
 
 ---
 

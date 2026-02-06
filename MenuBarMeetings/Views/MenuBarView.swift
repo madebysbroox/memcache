@@ -7,10 +7,12 @@ import SwiftUI
 /// - Meeting > 30 min away → "2:30 PM · Standup" (default style)
 /// - Meeting 15–30 min → adds "in Xm" countdown, orange tint
 /// - Meeting 5–15 min → countdown, red tint
-/// - Meeting < 5 min → countdown, red tint, bold
+/// - Meeting < 5 min → countdown, red tint, pulse animation
 /// - Ongoing → "now · Standup", blue tint
 struct MenuBarView: View {
     let nextMeeting: Meeting?
+
+    @State private var isPulsing = false
 
     var body: some View {
         if let meeting = nextMeeting {
@@ -20,6 +22,19 @@ struct MenuBarView: View {
                 Image(systemName: iconName(for: meeting))
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(iconColor(for: meeting))
+                    .opacity(isPulsing && meeting.urgencyLevel == .high ? 0.4 : 1.0)
+                    .animation(
+                        meeting.urgencyLevel == .high
+                            ? .easeInOut(duration: 1.0).repeatForever(autoreverses: true)
+                            : .default,
+                        value: isPulsing
+                    )
+            }
+            .onChange(of: meeting.urgencyLevel) { newValue in
+                isPulsing = newValue == .high
+            }
+            .onAppear {
+                isPulsing = meeting.urgencyLevel == .high
             }
         } else {
             Label("No meetings", systemImage: "calendar")

@@ -464,6 +464,65 @@ else
     fail "Preferences button still disabled"
 fi
 
+# ── 12. Sprint 6: Advanced urgency & meeting actions ──────────────────
+echo ""
+echo "[12] Sprint 6 advanced urgency & meeting actions"
+
+if grep -q 'joinLink' "$MODEL"; then
+    pass "Meeting has joinLink detection"
+else
+    fail "Meeting missing joinLink"
+fi
+
+if grep -q 'joinLabel' "$MODEL"; then
+    pass "Meeting has joinLabel"
+else
+    fail "Meeting missing joinLabel"
+fi
+
+if grep -q 'copyableDetails' "$MODEL"; then
+    pass "Meeting has copyableDetails"
+else
+    fail "Meeting missing copyableDetails"
+fi
+
+if grep -q 'joinPatterns\|zoom.*teams.*meet' "$MODEL"; then
+    pass "Meeting detects Zoom/Teams/Meet/Webex patterns"
+else
+    fail "Meeting missing join link patterns"
+fi
+
+if grep -q 'isPulsing\|pulse\|animation.*repeatForever' "$LABEL"; then
+    pass "MenuBarView has pulse animation for high urgency"
+else
+    fail "MenuBarView missing pulse animation"
+fi
+
+if grep -q 'NSWorkspace.shared.open' "$POPUP"; then
+    pass "MeetingRow has Join button that opens link"
+else
+    fail "MeetingRow missing Join button"
+fi
+
+if grep -q 'NSPasteboard\|copyableDetails' "$POPUP"; then
+    pass "MeetingRow has Copy button with pasteboard"
+else
+    fail "MeetingRow missing Copy button"
+fi
+
+if grep -q 'video' "$POPUP"; then
+    pass "Join button uses video SF Symbol"
+else
+    fail "Join button missing icon"
+fi
+
+# Verify no hardcoded colors (dark/light mode safe)
+if ! grep -qE 'Color\(\.|\.black|\.white' "$POPUP" && ! grep -qE 'Color\(\.|\.black|\.white' "$LABEL"; then
+    pass "Views use only semantic colors (dark/light mode safe)"
+else
+    fail "Hardcoded colors found (dark/light mode issue)"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

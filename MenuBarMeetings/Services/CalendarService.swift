@@ -1,6 +1,7 @@
 import EventKit
 import Foundation
 import Combine
+import SwiftUI
 
 /// Manages Apple Calendar access via EventKit.
 /// Publishes today's meetings and auto-refreshes on calendar changes + polling.
@@ -80,7 +81,8 @@ final class CalendarService: ObservableObject {
                     isAllDay: event.isAllDay,
                     location: event.location,
                     url: event.url,
-                    calendarName: event.calendar.title
+                    calendarName: event.calendar.title,
+                    calendarColor: Color(cgColor: event.calendar.cgColor)
                 )
             }
             .sorted { $0.startDate < $1.startDate }

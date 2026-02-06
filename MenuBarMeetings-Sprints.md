@@ -158,24 +158,52 @@ Create a new Xcode project targeting macOS with the following settings and struc
 
 **Goal**: Build the expandable daily schedule view
 
-### Issues/Tasks
-- [ ] **UI-001**: Design daily schedule popup layout
-- [ ] **UI-002**: Meeting list UI component (time, title, duration)
-- [ ] **UI-003**: Popup window positioning (below menu bar item)
-- [ ] **Display-002**: Format full day's meetings in popup
-- [ ] **UX-001**: Click outside to close popup behavior
+### Step 1 — Enhanced Meeting Model
+
+- [x] **Data-002**: Add `calendarColor: Color` property to `Meeting`
+  - Sourced from `EKCalendar.cgColor` in `CalendarService`
+- [x] **Data-003**: Add `formattedTimeRange` computed property
+  - Format: `"2:30 PM – 3:00 PM"` using shared `DateFormatter`
+
+### Step 2 — Polished Popup Layout
+
+- [x] **UI-001**: Separate all-day events from timed events
+  - `SectionHeader` component for "All Day" / "Schedule" labels
+  - `AllDayRow` shows calendar color dot, title, and calendar name
+  - Timed section only gets a header when all-day events are also present
+
+- [x] **UI-002**: Enhanced `MeetingRow`
+  - Calendar color dot (8 pt circle) aligned to title
+  - Full time range (`formattedTimeRange`) instead of just start time
+  - Location line (conditional, shown when non-empty)
+  - Duration badge right-aligned
+  - Ongoing meetings: semibold title + subtle accent background highlight
+  - Past meetings: 50% opacity fade
+
+- [x] **UI-003**: Popup window positioning (below menu bar item)
+  - Handled automatically by `MenuBarExtra(.window)` style
+
+### Step 3 — UX Behavior
+
+- [x] **UX-001**: Click outside to close popup
+  - Handled automatically by `MenuBarExtra(.window)` style
+- [x] **Display-002**: Format full day's meetings with chronological sort
+  - Already sorted in `CalendarService.fetchTodaysMeetings()`
 
 ### Deliverables
 - Clicking menu bar opens popup showing full day's meetings
-- Clean, readable meeting list with proper formatting
-- Popup behaves like native Mac popups
+- All-day events grouped at top, timed events below with "Schedule" header
+- Each meeting shows color dot, title, time range, duration, and optional location
+- Ongoing meeting visually highlighted; past meetings faded
+- Popup behaves like native Mac popups (auto-positioning, click-outside-to-close)
 
 ### Definition of Done
-- [ ] Popup shows all today's meetings in chronological order
-- [ ] Each meeting displays time, title, and duration
-- [ ] Popup positions correctly below menu bar item
-- [ ] Clicking outside closes popup
-- [ ] Empty state ("No meetings today") handled
+- [x] Popup shows all today's meetings in chronological order
+- [x] Each meeting displays time range, title, duration, location, and calendar color
+- [x] Popup positions correctly below menu bar item (MenuBarExtra .window)
+- [x] Clicking outside closes popup (MenuBarExtra .window)
+- [x] Empty state ("No meetings today") handled
+- [x] All-day events separated into their own section
 
 ---
 

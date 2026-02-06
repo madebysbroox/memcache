@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import MenuBarMeetings
 
 final class MeetingTests: XCTestCase {
@@ -8,6 +9,13 @@ final class MeetingTests: XCTestCase {
     func testFormattedStartTime() {
         let meeting = makeMeeting(startHour: 14, startMinute: 30)
         XCTAssertEqual(meeting.formattedStartTime, "2:30 PM")
+    }
+
+    // MARK: - formattedTimeRange
+
+    func testFormattedTimeRange() {
+        let meeting = makeMeeting(startHour: 14, startMinute: 30, durationMinutes: 30)
+        XCTAssertEqual(meeting.formattedTimeRange, "2:30 PM – 3:00 PM")
     }
 
     // MARK: - formattedDuration
@@ -89,7 +97,8 @@ final class MeetingTests: XCTestCase {
             isAllDay: isAllDay,
             location: nil,
             url: nil,
-            calendarName: "Test"
+            calendarName: "Test",
+            calendarColor: .blue
         )
     }
 
@@ -106,7 +115,8 @@ final class MeetingTests: XCTestCase {
             isAllDay: false,
             location: nil,
             url: nil,
-            calendarName: "Test"
+            calendarName: "Test",
+            calendarColor: .blue
         )
     }
 }

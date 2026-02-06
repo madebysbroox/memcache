@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct Meeting: Identifiable {
     let id: String
@@ -9,6 +10,7 @@ struct Meeting: Identifiable {
     let location: String?
     let url: URL?
     let calendarName: String
+    let calendarColor: Color
 
     var duration: TimeInterval {
         endDate.timeIntervalSince(startDate)
@@ -25,9 +27,12 @@ struct Meeting: Identifiable {
 
     /// Formatted start time, e.g. "2:30 PM"
     var formattedStartTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: startDate)
+        Self.timeFormatter.string(from: startDate)
+    }
+
+    /// Formatted time range, e.g. "2:30 – 3:00 PM"
+    var formattedTimeRange: String {
+        "\(Self.timeFormatter.string(from: startDate)) – \(Self.timeFormatter.string(from: endDate))"
     }
 
     /// Formatted duration, e.g. "30m" or "1h 15m"
@@ -51,4 +56,12 @@ struct Meeting: Identifiable {
         }
         return "\(formattedStartTime) · \(title)"
     }
+
+    // MARK: - Shared formatter
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
 }

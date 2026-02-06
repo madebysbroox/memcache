@@ -275,6 +275,58 @@ else
     fail "PopupView does not trigger requestAccess"
 fi
 
+# ── 9. Sprint 3: Popup daily view polish ──────────────────────────────
+echo ""
+echo "[9] Sprint 3 popup daily view"
+
+if grep -q 'calendarColor' "$MODEL"; then
+    pass "Meeting has calendarColor property"
+else
+    fail "Meeting missing calendarColor"
+fi
+
+if grep -q 'formattedTimeRange' "$MODEL"; then
+    pass "Meeting has formattedTimeRange"
+else
+    fail "Meeting missing formattedTimeRange"
+fi
+
+if grep -q 'AllDayRow' "$POPUP"; then
+    pass "PopupView has AllDayRow component"
+else
+    fail "PopupView missing AllDayRow"
+fi
+
+if grep -q 'SectionHeader' "$POPUP"; then
+    pass "PopupView has SectionHeader component"
+else
+    fail "PopupView missing SectionHeader"
+fi
+
+if grep -q 'calendarColor' "$POPUP"; then
+    pass "MeetingRow shows calendar color dot"
+else
+    fail "MeetingRow missing calendar color"
+fi
+
+if grep -q 'formattedTimeRange' "$POPUP"; then
+    pass "MeetingRow shows time range"
+else
+    fail "MeetingRow missing time range"
+fi
+
+if grep -q 'location' "$POPUP"; then
+    pass "MeetingRow shows location when available"
+else
+    fail "MeetingRow missing location display"
+fi
+
+if grep -q 'isOngoing' "$POPUP"; then
+    pass "MeetingRow highlights ongoing meetings"
+else
+    fail "MeetingRow does not highlight ongoing meetings"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

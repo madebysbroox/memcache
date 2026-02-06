@@ -54,11 +54,27 @@ struct PopupView: View {
     }
 
     private var meetingList: some View {
-        ScrollView {
+        let allDay = calendarService.meetings.filter { $0.isAllDay }
+        let timed = calendarService.meetings.filter { !$0.isAllDay }
+
+        return ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(calendarService.meetings) { meeting in
-                    MeetingRow(meeting: meeting)
-                    Divider().padding(.leading, 12)
+                if !allDay.isEmpty {
+                    SectionHeader(title: "All Day")
+                    ForEach(allDay) { meeting in
+                        AllDayRow(meeting: meeting)
+                        Divider().padding(.leading, 12)
+                    }
+                }
+
+                if !timed.isEmpty {
+                    if !allDay.isEmpty {
+                        SectionHeader(title: "Schedule")
+                    }
+                    ForEach(timed) { meeting in
+                        MeetingRow(meeting: meeting)
+                        Divider().padding(.leading, 12)
+                    }
                 }
             }
         }
@@ -111,32 +127,87 @@ struct PopupView: View {
     }
 }
 
+// MARK: - Section Header
+
+struct SectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+    }
+}
+
+// MARK: - All-Day Row
+
+struct AllDayRow: View {
+    let meeting: Meeting
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(meeting.calendarColor)
+                .frame(width: 8, height: 8)
+
+            Text(meeting.title)
+                .font(.callout)
+                .lineLimit(1)
+
+            Spacer()
+
+            Text(meeting.calendarName)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+    }
+}
+
 // MARK: - Meeting Row
 
 struct MeetingRow: View {
     let meeting: Meeting
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Text(meeting.isAllDay ? "All day" : meeting.formattedStartTime)
-                .font(.callout.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 70, alignment: .trailing)
+        HStack(alignment: .top, spacing: 8) {
+            Circle()
+                .fill(meeting.calendarColor)
+                .frame(width: 8, height: 8)
+                .padding(.top, 5)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(meeting.title)
                     .font(.callout)
                     .lineLimit(1)
                     .opacity(meeting.isPast ? 0.5 : 1.0)
+                    .fontWeight(meeting.isOngoing ? .semibold : .regular)
 
-                Text(meeting.formattedDuration)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                Text(meeting.formattedTimeRange)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+
+                if let location = meeting.location, !location.isEmpty {
+                    Text(location)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
+
+            Text(meeting.formattedDuration)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.top, 2)
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
+        .background(meeting.isOngoing ? Color.accentColor.opacity(0.08) : Color.clear)
     }
 }

@@ -166,6 +166,27 @@ struct Meeting: Identifiable {
         return detector.firstMatch(in: text, range: range)?.url
     }
 
+    // MARK: - Accessibility
+
+    /// VoiceOver description combining key meeting details.
+    var accessibilityDescription: String {
+        var parts: [String] = []
+        if isOngoing { parts.append("Ongoing") }
+        else if isPast { parts.append("Past") }
+        parts.append(title)
+        if !isAllDay {
+            parts.append(formattedTimeRange)
+            parts.append(formattedDuration)
+        } else {
+            parts.append("All day")
+        }
+        if let loc = location, !loc.isEmpty {
+            parts.append(loc)
+        }
+        parts.append(calendarName)
+        return parts.joined(separator: ", ")
+    }
+
     // MARK: - Shared formatter
 
     private static let timeFormatter: DateFormatter = {

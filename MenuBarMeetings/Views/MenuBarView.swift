@@ -36,8 +36,10 @@ struct MenuBarView: View {
             .onAppear {
                 isPulsing = meeting.urgencyLevel == .high
             }
+            .accessibilityLabel(accessibilityText(for: meeting))
         } else {
             Label("No meetings", systemImage: "calendar")
+                .accessibilityLabel("No upcoming meetings today")
         }
     }
 
@@ -75,6 +77,20 @@ struct MenuBarView: View {
         case .medium:   return .red
         case .high:     return .red
         case .ongoing:  return .blue
+        }
+    }
+
+    private func accessibilityText(for meeting: Meeting) -> String {
+        let urgency = meeting.urgencyLevel
+        switch urgency {
+        case .none:
+            return "Next meeting: \(meeting.title) at \(meeting.formattedStartTime)"
+        case .low, .medium:
+            return "Upcoming: \(meeting.title) \(meeting.countdownLabel)"
+        case .high:
+            return "Starting soon: \(meeting.title) \(meeting.countdownLabel)"
+        case .ongoing:
+            return "In progress: \(meeting.title)"
         }
     }
 }

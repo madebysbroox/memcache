@@ -608,6 +608,127 @@ else
     fail "PreferencesView missing update interval picker"
 fi
 
+# ── 14. Sprint 8: Final polish & release prep ─────────────────────────
+echo ""
+echo "[14] Sprint 8 final polish & release prep"
+
+ENTITLEMENTS="$ROOT/MenuBarMeetings/MenuBarMeetings.entitlements"
+
+# Accessibility
+if grep -q 'accessibilityLabel\|accessibilityDescription' "$MODEL"; then
+    pass "Meeting has accessibility description"
+else
+    fail "Meeting missing accessibility support"
+fi
+
+if grep -q 'accessibilityLabel' "$POPUP"; then
+    pass "PopupView rows have accessibility labels"
+else
+    fail "PopupView missing accessibility labels"
+fi
+
+if grep -q 'accessibilityElement' "$POPUP"; then
+    pass "PopupView uses accessibilityElement grouping"
+else
+    fail "PopupView missing accessibilityElement"
+fi
+
+if grep -q 'accessibilityLabel' "$LABEL"; then
+    pass "MenuBarView has accessibility label"
+else
+    fail "MenuBarView missing accessibility label"
+fi
+
+# Keyboard shortcuts
+if grep -q 'keyboardShortcut' "$POPUP"; then
+    pass "PopupView has keyboard shortcuts"
+else
+    fail "PopupView missing keyboard shortcuts"
+fi
+
+if grep -q 'arrow.clockwise\|forceRefresh' "$POPUP"; then
+    pass "PopupView has refresh button"
+else
+    fail "PopupView missing refresh button"
+fi
+
+# Entitlements & code signing
+if [ -f "$ENTITLEMENTS" ]; then
+    pass "Entitlements file exists"
+else
+    fail "Entitlements file missing"
+fi
+
+if grep -q 'app-sandbox' "$ENTITLEMENTS"; then
+    pass "App sandbox enabled in entitlements"
+else
+    fail "App sandbox not configured"
+fi
+
+if grep -q 'personal-information.calendars' "$ENTITLEMENTS"; then
+    pass "Calendar entitlement configured"
+else
+    fail "Calendar entitlement missing"
+fi
+
+if grep -q 'network.client' "$ENTITLEMENTS"; then
+    pass "Network client entitlement configured"
+else
+    fail "Network client entitlement missing"
+fi
+
+if grep -q 'network.server' "$ENTITLEMENTS"; then
+    pass "Network server entitlement (OAuth loopback) configured"
+else
+    fail "Network server entitlement missing"
+fi
+
+# Info.plist privacy descriptions
+if grep -q 'NSCalendarsUsageDescription' "$PLIST"; then
+    pass "Info.plist has calendar usage description"
+else
+    fail "Info.plist missing calendar usage description"
+fi
+
+if grep -q 'NSCalendarsFullAccessUsageDescription' "$PLIST"; then
+    pass "Info.plist has full calendar access description (macOS 14+)"
+else
+    fail "Info.plist missing full calendar access description"
+fi
+
+if grep -q '1.0.0' "$PLIST"; then
+    pass "App version is 1.0.0"
+else
+    fail "App version not set to 1.0.0"
+fi
+
+# XCTest coverage
+TESTS="$ROOT/Tests/MenuBarMeetingsTests/MeetingTests.swift"
+
+if grep -q 'testZeroDurationMeeting' "$TESTS"; then
+    pass "XCTests include edge case: zero-duration meeting"
+else
+    fail "XCTests missing zero-duration edge case"
+fi
+
+if grep -q 'testAccessibilityDescription' "$TESTS"; then
+    pass "XCTests include accessibility description tests"
+else
+    fail "XCTests missing accessibility tests"
+fi
+
+if grep -q 'testJoinLinkDetectsWebexURL' "$TESTS"; then
+    pass "XCTests include Webex join link detection"
+else
+    fail "XCTests missing Webex test"
+fi
+
+if grep -q 'testUrgencyAtExact.*Boundary' "$TESTS"; then
+    pass "XCTests include urgency boundary tests"
+else
+    fail "XCTests missing urgency boundary tests"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

@@ -213,6 +213,146 @@ final class MeetingTests: XCTestCase {
         XCTAssertTrue(details.contains("zoom.us"))
     }
 
+    // MARK: - Edge cases (Sprint 8)
+
+    func testZeroDurationMeeting() {
+        let meeting = makeMeeting(durationMinutes: 0)
+        XCTAssertEqual(meeting.formattedDuration, "0m")
+        XCTAssertEqual(meeting.duration, 0)
+    }
+
+    func testVeryLongDuration() {
+        let meeting = makeMeeting(durationMinutes: 480) // 8 hours
+        XCTAssertEqual(meeting.formattedDuration, "8h")
+    }
+
+    func testMultiHourDurationWithMinutes() {
+        let meeting = makeMeeting(durationMinutes: 135) // 2h 15m
+        XCTAssertEqual(meeting.formattedDuration, "2h 15m")
+    }
+
+    func testEmptyTitleTruncation() {
+        let meeting = makeMeeting(title: "")
+        XCTAssertEqual(meeting.truncatedTitle(maxLength: 20), "")
+    }
+
+    func testTitleExactlyAtMaxLength() {
+        let meeting = makeMeeting(title: "Exactly Twenty Chars") // 20 chars
+        XCTAssertEqual(meeting.truncatedTitle(maxLength: 20), "Exactly Twenty Chars")
+    }
+
+    func testTitleAllFillerWords() {
+        let meeting = makeMeeting(title: "The And For To Of In On At")
+        let result = meeting.truncatedTitle(maxLength: 30)
+        // All words are filler — result should be empty
+        XCTAssertEqual(result, "")
+    }
+
+    func testUrgencyAtExact30MinBoundary() {
+        // At exactly 30 minutes, minutesUntilStart == 30, which is >= 30 → .none
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(30 * 60),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.urgencyLevel, .none)
+    }
+
+    func testUrgencyAtExact15MinBoundary() {
+        // At exactly 15 minutes, minutesUntilStart == 15, which is >= 15 → .low
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(15 * 60),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.urgencyLevel, .low)
+    }
+
+    func testUrgencyAtExact5MinBoundary() {
+        // At exactly 5 minutes, minutesUntilStart == 5, which is >= 5 → .medium
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(5 * 60),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.urgencyLevel, .medium)
+    }
+
+    func testCountdownLabelExactHour() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(60 * 60 + 30),
+            durationMinutes: 30
+        )
+        XCTAssertEqual(meeting.countdownLabel, "in 1h")
+    }
+
+    func testJoinLinkDetectsWebexURL() {
+        let meeting = makeMeeting(url: URL(string: "https://company.webex.com/meet/abc"))
+        XCTAssertNotNil(meeting.joinLink)
+        XCTAssertEqual(meeting.joinLabel, "Join Webex")
+    }
+
+    func testJoinLinkNilWhenNoURLOrLocation() {
+        let meeting = makeMeeting()
+        XCTAssertNil(meeting.joinLink)
+        XCTAssertNil(meeting.joinLabel)
+    }
+
+    func testCopyableDetailsForAllDayEvent() {
+        let meeting = makeMeeting(title: "Team Offsite", isAllDay: true, location: "Building 5")
+        let details = meeting.copyableDetails
+        XCTAssertTrue(details.contains("Team Offsite"))
+        XCTAssertTrue(details.contains("Building 5"))
+        // All-day events should NOT include time range
+        XCTAssertFalse(details.contains("AM"))
+        XCTAssertFalse(details.contains("PM"))
+    }
+
+    func testCopyableDetailsMinimal() {
+        let meeting = makeMeeting(title: "Quick Chat")
+        let details = meeting.copyableDetails
+        XCTAssertTrue(details.contains("Quick Chat"))
+        // Should have title + time range, no location or link
+        XCTAssertEqual(details.components(separatedBy: "\n").count, 2)
+    }
+
+    func testAllDayMeetingProperties() {
+        let meeting = makeMeeting(title: "Holiday", isAllDay: true)
+        XCTAssertTrue(meeting.isAllDay)
+        XCTAssertEqual(meeting.menuBarLabel, "Holiday")
+    }
+
+    func testAccessibilityDescriptionOngoing() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(-600),
+            durationMinutes: 30
+        )
+        let desc = meeting.accessibilityDescription
+        XCTAssertTrue(desc.contains("Ongoing"))
+        XCTAssertTrue(desc.contains("Test Meeting"))
+    }
+
+    func testAccessibilityDescriptionFuture() {
+        let meeting = makeMeeting(title: "Design Review", startHour: 15, location: "Room B")
+        let desc = meeting.accessibilityDescription
+        XCTAssertTrue(desc.contains("Design Review"))
+        XCTAssertTrue(desc.contains("Room B"))
+        XCTAssertTrue(desc.contains("Test"))
+    }
+
+    func testAccessibilityDescriptionAllDay() {
+        let meeting = makeMeeting(title: "Company Holiday", isAllDay: true)
+        let desc = meeting.accessibilityDescription
+        XCTAssertTrue(desc.contains("All day"))
+        XCTAssertTrue(desc.contains("Company Holiday"))
+    }
+
+    func testAccessibilityDescriptionPast() {
+        let meeting = makeMeeting(
+            start: Date().addingTimeInterval(-3600),
+            durationMinutes: 30
+        )
+        let desc = meeting.accessibilityDescription
+        XCTAssertTrue(desc.contains("Past"))
+    }
+
     // MARK: - Helpers
 
     private func makeMeeting(

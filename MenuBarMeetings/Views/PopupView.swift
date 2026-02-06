@@ -104,12 +104,24 @@ struct PopupView: View {
             Button("Preferences") {
                 NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
+            .keyboardShortcut(",", modifiers: .command)
+
+            Button {
+                Task { @MainActor in
+                    await calendarService.forceRefresh()
+                }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .keyboardShortcut("r", modifiers: .command)
+            .help("Refresh calendars")
 
             Spacer()
 
             Button("Quit") {
                 NSApplication.shared.terminate(nil)
             }
+            .keyboardShortcut("q", modifiers: .command)
         }
         .padding(12)
     }
@@ -148,6 +160,7 @@ struct AllDayRow: View {
             Circle()
                 .fill(meeting.calendarColor)
                 .frame(width: 8, height: 8)
+                .accessibilityHidden(true)
 
             Text(meeting.title)
                 .font(.callout)
@@ -161,6 +174,8 @@ struct AllDayRow: View {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("All day: \(meeting.title), \(meeting.calendarName)")
     }
 }
 
@@ -241,5 +256,7 @@ struct MeetingRow: View {
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
         .background(meeting.isOngoing ? Color.accentColor.opacity(0.08) : Color.clear)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(meeting.accessibilityDescription)
     }
 }

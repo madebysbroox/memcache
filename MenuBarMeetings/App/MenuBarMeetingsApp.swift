@@ -13,6 +13,11 @@ struct MenuBarMeetingsApp: App {
             MenuBarView(nextMeeting: calendarService.nextMeeting)
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            PreferencesView()
+                .environmentObject(calendarService)
+        }
     }
 }
 

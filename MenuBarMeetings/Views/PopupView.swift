@@ -17,8 +17,8 @@ struct PopupView: View {
         }
         .frame(width: 320, height: 400)
         .onAppear {
-            if calendarService.authorizationStatus == .notDetermined {
-                calendarService.requestAccess()
+            if calendarService.needsSetup {
+                calendarService.requestAppleAccess()
             }
         }
     }
@@ -36,20 +36,16 @@ struct PopupView: View {
 
     @ViewBuilder
     private var content: some View {
-        switch calendarService.authorizationStatus {
-        case .authorized, .fullAccess:
-            if calendarService.meetings.isEmpty {
-                emptyState
-            } else {
-                meetingList
-            }
-        case .notDetermined:
+        if calendarService.needsSetup {
             permissionPrompt(message: "Requesting calendar access…")
-        default:
+        } else if !calendarService.hasAnyAuthorized {
             permissionPrompt(
-                message: calendarService.errorMessage
-                    ?? "Calendar access denied. Open System Settings to grant permission."
+                message: "No calendars connected. Open Preferences to connect a calendar."
             )
+        } else if calendarService.meetings.isEmpty {
+            emptyState
+        } else {
+            meetingList
         }
     }
 
@@ -105,9 +101,8 @@ struct PopupView: View {
     private var footer: some View {
         HStack {
             Button("Preferences") {
-                // Stub — wired up in Sprint 5
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
-            .disabled(true)
 
             Spacer()
 

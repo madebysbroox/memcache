@@ -187,17 +187,11 @@ else
     fail "Meeting missing formattedDuration"
 fi
 
-# ── 7. Sprint 2: CalendarService ─────────────────────────────────────
+# ── 7. CalendarService & Providers ────────────────────────────────────
 echo ""
-echo "[7] CalendarService"
+echo "[7] CalendarService & providers"
 
 SVC="$ROOT/MenuBarMeetings/Services/CalendarService.swift"
-
-if grep -q 'import EventKit' "$SVC"; then
-    pass "CalendarService imports EventKit"
-else
-    fail "CalendarService does not import EventKit"
-fi
 
 if grep -q 'ObservableObject' "$SVC"; then
     pass "CalendarService is ObservableObject"
@@ -205,22 +199,22 @@ else
     fail "CalendarService is not ObservableObject"
 fi
 
-if grep -q 'requestAccess' "$SVC"; then
-    pass "CalendarService has requestAccess()"
+if grep -q 'requestAppleAccess' "$SVC"; then
+    pass "CalendarService has requestAppleAccess()"
 else
-    fail "CalendarService missing requestAccess()"
+    fail "CalendarService missing requestAppleAccess()"
 fi
 
-if grep -q 'fetchTodaysMeetings' "$SVC"; then
-    pass "CalendarService has fetchTodaysMeetings()"
+if grep -q 'connectGoogle' "$SVC"; then
+    pass "CalendarService has connectGoogle()"
 else
-    fail "CalendarService missing fetchTodaysMeetings()"
+    fail "CalendarService missing connectGoogle()"
 fi
 
-if grep -q 'EKEventStoreChanged' "$SVC"; then
-    pass "CalendarService observes EKEventStoreChanged"
+if grep -q 'refresh' "$SVC"; then
+    pass "CalendarService has refresh()"
 else
-    fail "CalendarService not observing store changes"
+    fail "CalendarService missing refresh()"
 fi
 
 if grep -q 'Timer.scheduledTimer' "$SVC"; then
@@ -269,7 +263,7 @@ else
     fail "PopupView missing MeetingRow"
 fi
 
-if grep -q 'requestAccess' "$POPUP"; then
+if grep -q 'requestAppleAccess\|requestAccess' "$POPUP"; then
     pass "PopupView triggers permission request on appear"
 else
     fail "PopupView does not trigger requestAccess"
@@ -389,6 +383,85 @@ if grep -q 'calendar.badge' "$LABEL"; then
     pass "MenuBarView uses urgency-specific SF Symbols"
 else
     fail "MenuBarView missing urgency SF Symbols"
+fi
+
+# ── 11. Sprint 5: Multi-calendar & preferences ────────────────────────
+echo ""
+echo "[11] Sprint 5 multi-calendar & preferences"
+
+PROVIDER="$ROOT/MenuBarMeetings/Services/CalendarProvider.swift"
+APPLE="$ROOT/MenuBarMeetings/Services/AppleCalendarProvider.swift"
+GOOGLE="$ROOT/MenuBarMeetings/Services/GoogleCalendarProvider.swift"
+KEYCHAIN="$ROOT/MenuBarMeetings/Services/KeychainHelper.swift"
+PREFS="$ROOT/MenuBarMeetings/Views/PreferencesView.swift"
+
+for file in "$PROVIDER" "$APPLE" "$GOOGLE" "$KEYCHAIN" "$PREFS"; do
+    name=$(basename "$file")
+    if [ -f "$file" ]; then
+        pass "$name exists"
+    else
+        fail "$name missing"
+    fi
+done
+
+if grep -q 'protocol CalendarProvider' "$PROVIDER"; then
+    pass "CalendarProvider protocol defined"
+else
+    fail "CalendarProvider protocol missing"
+fi
+
+if grep -q 'CalendarProviderStatus' "$PROVIDER"; then
+    pass "CalendarProviderStatus enum defined"
+else
+    fail "CalendarProviderStatus missing"
+fi
+
+if grep -q 'CalendarProvider' "$APPLE" && grep -q 'EventKit' "$APPLE"; then
+    pass "AppleCalendarProvider conforms to protocol and uses EventKit"
+else
+    fail "AppleCalendarProvider not properly implemented"
+fi
+
+if grep -q 'CalendarProvider' "$GOOGLE" && grep -q 'OAuth' "$GOOGLE"; then
+    pass "GoogleCalendarProvider conforms to protocol with OAuth"
+else
+    fail "GoogleCalendarProvider not properly implemented"
+fi
+
+if grep -q 'SecItemAdd\|kSecClass' "$KEYCHAIN"; then
+    pass "KeychainHelper uses Security framework"
+else
+    fail "KeychainHelper missing Security framework usage"
+fi
+
+if grep -q 'enabledProviders\|providers' "$SVC"; then
+    pass "CalendarService aggregates multiple providers"
+else
+    fail "CalendarService not aggregating providers"
+fi
+
+if grep -q 'ProviderRow' "$PREFS"; then
+    pass "PreferencesView has ProviderRow components"
+else
+    fail "PreferencesView missing ProviderRow"
+fi
+
+if grep -q 'Settings' "$APP"; then
+    pass "App registers Settings scene for Preferences"
+else
+    fail "App missing Settings scene"
+fi
+
+if grep -q 'showSettingsWindow\|showPreferencesWindow' "$POPUP"; then
+    pass "PopupView Preferences button opens settings"
+else
+    fail "PopupView Preferences button not wired"
+fi
+
+if grep -qv '\.disabled(true)' "$POPUP" || ! grep -q 'Preferences.*disabled' "$POPUP"; then
+    pass "Preferences button is enabled"
+else
+    fail "Preferences button still disabled"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────

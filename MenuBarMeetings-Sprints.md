@@ -255,24 +255,67 @@ Create a new Xcode project targeting macOS with the following settings and struc
 
 **Goal**: Expand beyond Apple Calendar to Google Calendar integration
 
-### Issues/Tasks
-- [ ] **Integration-001**: Google Calendar API setup and authentication
-- [ ] **Integration-002**: OAuth flow for Google Calendar
-- [ ] **Data-002**: Multi-source calendar data management
-- [ ] **Settings-001**: Basic preferences window (calendar selection)
-- [ ] **Sync-001**: Unified event fetching from multiple sources
+### Step 1 — CalendarProvider Abstraction
+
+- [x] **Data-002**: Create `CalendarProvider` protocol
+  - `CalendarProviderStatus` enum: `notConfigured`, `authorized`, `denied`, `error`
+  - Protocol: `name`, `status`, `requestAccess()`, `fetchTodaysMeetings()`
+- [x] **Data-003**: Extract `AppleCalendarProvider` from CalendarService
+  - EventKit logic moved out; conforms to `CalendarProvider`
+  - macOS 14 `requestFullAccessToEvents` with macOS 13 fallback
+  - Event IDs prefixed with `apple_` for multi-source dedup
+
+### Step 2 — Google Calendar Provider
+
+- [x] **Integration-001**: `GoogleCalendarProvider` with OAuth 2.0
+  - Loopback redirect flow (`http://127.0.0.1:8089`) — no client secret needed
+  - Configurable `clientID` (set from Google Cloud Console)
+  - Token exchange + automatic refresh when expired
+- [x] **Integration-002**: Event parsing from Google Calendar REST API
+  - Fetches primary calendar events for today
+  - Handles timed and all-day events, location, hangout link
+  - Event IDs prefixed with `google_`
+
+### Step 3 — Secure Credential Storage
+
+- [x] **Security-001**: `KeychainHelper` utility
+  - Save / read / delete via `SecItemAdd` / `SecItemCopyMatching` / `SecItemDelete`
+  - Generic `Codable` convenience methods for OAuth tokens
+  - Scoped to app bundle identifier
+
+### Step 4 — Unified CalendarService
+
+- [x] **Sync-001**: Refactor `CalendarService` as multi-provider aggregator
+  - Holds `appleProvider` + `googleProvider`
+  - `refresh()` fetches from all `enabledProviders` and merges chronologically
+  - `requestAppleAccess()`, `connectGoogle()`, `disconnectGoogle()`
+  - `needsSetup` / `hasAnyAuthorized` for UI state
+
+### Step 5 — Preferences Window
+
+- [x] **Settings-001**: `PreferencesView` with `ProviderRow` components
+  - Apple Calendar: Connect / status display (no disconnect — OS-managed)
+  - Google Calendar: Connect / Disconnect with status
+  - Color-coded status indicators (green / orange / red / secondary)
+- [x] **Settings-002**: Wire into app as `Settings` scene
+  - Preferences button in PopupView opens settings via `showSettingsWindow:`
+  - Button enabled (no longer a stub)
 
 ### Deliverables
-- Connect to Google Calendar accounts
-- Preferences to enable/disable calendar sources
-- Combined view of events from multiple calendars
+- CalendarProvider protocol for pluggable calendar sources
+- Apple Calendar extracted into its own provider
+- Google Calendar with full OAuth + REST API event fetching
+- Keychain-backed token storage
+- Preferences window for connecting / disconnecting sources
+- Unified event list from all enabled providers
 
 ### Definition of Done
-- [ ] Users can authenticate with Google Calendar
-- [ ] Preferences window allows calendar source selection
-- [ ] Events from multiple calendars appear in unified view
-- [ ] Calendar credentials stored securely in Keychain
-- [ ] Error handling for authentication failures
+- [x] Users can authenticate with Google Calendar (OAuth loopback flow)
+- [x] Preferences window allows calendar source connection/disconnection
+- [x] Events from multiple calendars appear in unified sorted view
+- [x] Calendar credentials stored securely in Keychain
+- [x] Error handling for authentication failures
+- [ ] Google Calendar requires `clientID` from Cloud Console (runtime config)
 
 ---
 

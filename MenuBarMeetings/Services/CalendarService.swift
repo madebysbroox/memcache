@@ -1,117 +1,102 @@
-import EventKit
 import Foundation
 import Combine
 import SwiftUI
 
-/// Manages Apple Calendar access via EventKit.
-/// Publishes today's meetings and auto-refreshes on calendar changes + polling.
+/// Aggregates meetings from all enabled calendar providers.
+/// Publishes a unified, sorted meeting list and handles polling.
 final class CalendarService: ObservableObject {
     @Published var meetings: [Meeting] = []
-    @Published var authorizationStatus: EKAuthorizationStatus = .notDetermined
-    @Published var errorMessage: String?
+    @Published var isLoading = false
 
-    private let store = EKEventStore()
-    private var cancellables = Set<AnyCancellable>()
+    let appleProvider = AppleCalendarProvider()
+    let googleProvider = GoogleCalendarProvider()
+
+    /// All registered providers.
+    var providers: [CalendarProvider] { [appleProvider, googleProvider] }
+
+    /// Providers that are currently authorized and contributing events.
+    var enabledProviders: [CalendarProvider] {
+        providers.filter { $0.status.isAuthorized }
+    }
+
+    /// True when at least one provider is authorized.
+    var hasAnyAuthorized: Bool {
+        providers.contains { $0.status.isAuthorized }
+    }
+
+    /// True when no provider has been configured yet (first launch).
+    var needsSetup: Bool {
+        providers.allSatisfy {
+            if case .notConfigured = $0.status { return true }
+            return false
+        }
+    }
+
     private var pollTimer: Timer?
-
-    /// Seconds between automatic refreshes.
     private let pollInterval: TimeInterval = 60
 
-    init() {
-        authorizationStatus = EKEventStore.authorizationStatus(for: .event)
-        observeStoreChanges()
-    }
+    init() {}
 
     deinit {
         pollTimer?.invalidate()
     }
 
-    // MARK: - Permissions (Calendar-002)
+    // MARK: - Public API
 
-    func requestAccess() {
-        if #available(macOS 14.0, *) {
-            store.requestFullAccessToEvents { [weak self] granted, error in
-                DispatchQueue.main.async {
-                    self?.handleAccessResult(granted: granted, error: error)
-                }
-            }
-        } else {
-            store.requestAccess(to: .event) { [weak self] granted, error in
-                DispatchQueue.main.async {
-                    self?.handleAccessResult(granted: granted, error: error)
-                }
-            }
-        }
-    }
-
-    private func handleAccessResult(granted: Bool, error: Error?) {
-        authorizationStatus = EKEventStore.authorizationStatus(for: .event)
-
-        if let error = error {
-            errorMessage = error.localizedDescription
-            return
-        }
-
-        if granted {
-            errorMessage = nil
-            fetchTodaysMeetings()
+    /// Request access for Apple Calendar (primary provider).
+    func requestAppleAccess() {
+        Task { @MainActor in
+            await appleProvider.requestAccess()
+            await refresh()
             startPolling()
-        } else {
-            errorMessage = "Calendar access denied. Grant permission in System Settings → Privacy & Security → Calendars."
         }
     }
 
-    // MARK: - Fetching (Calendar-003)
-
-    func fetchTodaysMeetings() {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: Date())
-        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { return }
-
-        let predicate = store.predicateForEvents(withStart: startOfDay, end: endOfDay, calendars: nil)
-        let ekEvents = store.events(matching: predicate)
-
-        meetings = ekEvents
-            .map { event in
-                Meeting(
-                    id: event.eventIdentifier,
-                    title: event.title ?? "(No title)",
-                    startDate: event.startDate,
-                    endDate: event.endDate,
-                    isAllDay: event.isAllDay,
-                    location: event.location,
-                    url: event.url,
-                    calendarName: event.calendar.title,
-                    calendarColor: Color(cgColor: event.calendar.cgColor)
-                )
-            }
-            .sorted { $0.startDate < $1.startDate }
+    /// Initiate Google Calendar OAuth sign-in.
+    func connectGoogle() {
+        Task { @MainActor in
+            await googleProvider.requestAccess()
+            await refresh()
+        }
     }
 
-    // MARK: - Auto-refresh
-
-    /// Reacts to external calendar changes (e.g. user edits in Calendar.app).
-    private func observeStoreChanges() {
-        NotificationCenter.default.publisher(for: .EKEventStoreChanged, object: store)
-            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.fetchTodaysMeetings()
-            }
-            .store(in: &cancellables)
+    /// Disconnect Google Calendar.
+    func disconnectGoogle() {
+        googleProvider.signOut()
+        Task { @MainActor in
+            await refresh()
+        }
     }
 
-    /// Polls on a fixed interval so the "next meeting" stays current
-    /// even when no external changes occur.
-    private func startPolling() {
+    /// Fetch events from all enabled providers and merge.
+    @MainActor
+    func refresh() async {
+        isLoading = true
+        var allMeetings: [Meeting] = []
+
+        for provider in enabledProviders {
+            let events = await provider.fetchTodaysMeetings()
+            allMeetings.append(contentsOf: events)
+        }
+
+        meetings = allMeetings.sorted { $0.startDate < $1.startDate }
+        isLoading = false
+    }
+
+    // MARK: - Polling
+
+    func startPolling() {
         pollTimer?.invalidate()
         pollTimer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
-            self?.fetchTodaysMeetings()
+            Task { @MainActor in
+                await self?.refresh()
+            }
         }
     }
 
     // MARK: - Derived state
 
-    /// The next upcoming (non-past, non-all-day) meeting.
+    /// The next upcoming (non-past, non-all-day) meeting across all providers.
     var nextMeeting: Meeting? {
         meetings.first { !$0.isPast && !$0.isAllDay }
     }

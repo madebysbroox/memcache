@@ -17,7 +17,9 @@ let package = Package(
         ),
         .testTarget(
             name: "MenuBarMeetingsTests",
-            path: "Tests/MenuBarMeetingsTests"
+            dependencies: ["MenuBarMeetings"],
+            path: "Tests/MenuBarMeetingsTests",
+            exclude: ["test_project_structure.sh"]
         )
     ]
 )

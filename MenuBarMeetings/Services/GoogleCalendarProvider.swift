@@ -60,7 +60,12 @@ final class GoogleCalendarProvider: CalendarProvider {
             let code = try await startOAuthFlow()
             let newTokens = try await exchangeCodeForTokens(code: code)
             tokens = newTokens
-            KeychainHelper.save(key: Self.keychainKey, value: newTokens)
+            
+            guard KeychainHelper.save(key: Self.keychainKey, value: newTokens) else {
+                status = .error("Failed to save Google credentials to Keychain.")
+                return
+            }
+            
             status = .authorized
         } catch {
             status = .error("Google sign-in failed: \(error.localizedDescription)")
@@ -75,7 +80,10 @@ final class GoogleCalendarProvider: CalendarProvider {
         // Refresh if expired
         if Date() >= tokens.expiresAt, let refreshed = try? await refreshAccessToken() {
             self.tokens = refreshed
-            KeychainHelper.save(key: Self.keychainKey, value: refreshed)
+            
+            // Best effort save - if it fails, continue with the valid token in memory
+            _ = KeychainHelper.save(key: Self.keychainKey, value: refreshed)
+            
             accessToken = refreshed.accessToken
         }
 

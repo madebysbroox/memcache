@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import AppKit
+import CryptoKit
 
 /// Microsoft Outlook provider using Microsoft Graph API + OAuth 2.0.
 ///
@@ -63,10 +64,7 @@ final class OutlookCalendarProvider: CalendarProvider {
 
     private static func codeChallenge(from verifier: String) -> String {
         let data = Data(verifier.utf8)
-        var hash = [UInt8](repeating: 0, count: 32)
-        data.withUnsafeBytes { ptr in
-            _ = CC_SHA256(ptr.baseAddress, CC_LONG(data.count), &hash)
-        }
+        let hash = SHA256.hash(data: data)
         return Data(hash).base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
@@ -94,7 +92,12 @@ final class OutlookCalendarProvider: CalendarProvider {
             let code = try await startOAuthFlow()
             let newTokens = try await exchangeCodeForTokens(code: code)
             tokens = newTokens
-            KeychainHelper.save(key: Self.keychainKey, value: newTokens)
+            
+            guard KeychainHelper.save(key: Self.keychainKey, value: newTokens) else {
+                status = .error("Failed to save Outlook credentials to Keychain.")
+                return
+            }
+            
             status = .authorized
         } catch {
             status = .error("Outlook sign-in failed: \(error.localizedDescription)")
@@ -109,7 +112,9 @@ final class OutlookCalendarProvider: CalendarProvider {
             guard let refreshed = try? await refreshAccessToken() else { return [] }
             currentTokens = refreshed
             tokens = refreshed
-            KeychainHelper.save(key: Self.keychainKey, value: refreshed)
+            
+            // Best effort save - if it fails, continue with the valid token in memory
+            _ = KeychainHelper.save(key: Self.keychainKey, value: refreshed)
         }
 
         let calendar = Calendar.current

@@ -27,4 +27,7 @@ protocol CalendarProvider: AnyObject {
 
     /// Fetch today's meetings. Returns an empty array on failure.
     func fetchTodaysMeetings() async -> [Meeting]
+    
+    /// Sign out and clear credentials (optional, mainly for OAuth providers).
+    func signOut()
 }

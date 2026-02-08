@@ -54,6 +54,11 @@ final class AppleCalendarProvider: CalendarProvider {
             )
         }
     }
+    
+    func signOut() {
+        // Apple Calendar uses system-level permissions, so there's no token to clear.
+        // User must revoke access in System Settings.
+    }
 
     // MARK: - Internal
 

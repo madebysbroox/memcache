@@ -18,41 +18,32 @@ A minimal, elegant Mac menu bar application that keeps your upcoming meetings vi
 
 ## Getting Started
 
-```bash
-cd MemCache
-# Open in Xcode
-open Package.swift
-# Or build from command line
-swift build
-```
-
-1. Open `MemCache/Package.swift` in Xcode
-2. Build and run (Cmd+R)
-3. Grant calendar access when prompted
-4. The app appears in your menu bar — click to see today's schedule
+1. Open `MemCache.xcodeproj` in Xcode
+2. Select your development team in Signing & Capabilities
+3. Build and run (Cmd+R)
+4. Grant calendar access when prompted
+5. The app appears in your menu bar — click to see today's schedule
 
 ## Project Structure
 
 ```
+MemCache.xcodeproj/                        # Xcode project
 MemCache/
-├── Package.swift                          # Swift Package Manager manifest
-├── Sources/MemCache/
-│   ├── MemCacheApp.swift                  # App entry point
-│   ├── AppDelegate.swift                  # Menu bar setup, popover, lifecycle
-│   ├── Models/
-│   │   └── Meeting.swift                  # Meeting data model + urgency levels
-│   ├── Services/
-│   │   ├── CalendarService.swift          # EventKit integration
-│   │   └── MeetingStore.swift             # Observable meeting state management
-│   ├── Views/
-│   │   ├── PopoverContentView.swift       # Main popover container
-│   │   ├── MeetingListView.swift          # Daily schedule list
-│   │   └── SettingsView.swift             # Preferences window
-│   └── Utilities/
-│       └── MenuBarFormatter.swift         # Smart title truncation + formatting
-└── Resources/
-    ├── Info.plist                          # App config (LSUIElement, calendar permissions)
-    └── MemCache.entitlements              # Sandbox + calendar entitlements
+├── MemCacheApp.swift                      # App entry point
+├── AppDelegate.swift                      # Menu bar setup, popover, lifecycle
+├── Info.plist                             # Calendar permission strings
+├── MemCache.entitlements                  # Sandbox + calendar entitlements
+├── Models/
+│   └── Meeting.swift                      # Meeting data model + urgency levels
+├── Services/
+│   ├── CalendarService.swift              # EventKit integration
+│   └── MeetingStore.swift                 # Observable meeting state management
+├── Views/
+│   ├── PopoverContentView.swift           # Main popover container
+│   ├── MeetingListView.swift              # Daily schedule list
+│   └── SettingsView.swift                 # Preferences window
+└── Utilities/
+    └── MenuBarFormatter.swift             # Smart title truncation + formatting
 ```
 
 ## Documentation

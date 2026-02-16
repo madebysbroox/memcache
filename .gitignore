@@ -1,0 +1,23 @@
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+xcuserdata/
+
+# Build
+build/
+DerivedData/
+.build/
+.swiftpm/
+
+# macOS
+.DS_Store
+*.dSYM
+*.dSYM.zip
+
+# Archives
+*.xcarchive
+
+# Swift Package Manager
+Packages/
+Package.resolved

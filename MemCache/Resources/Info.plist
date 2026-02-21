@@ -9,9 +9,11 @@
     <key>CFBundleIdentifier</key>
     <string>com.memcache.app</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>2.0.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026 MemCache. All rights reserved.</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>

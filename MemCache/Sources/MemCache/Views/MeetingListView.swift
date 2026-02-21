@@ -1,9 +1,12 @@
 import SwiftUI
+import AppKit
 
 /// Scrollable list of today's meetings shown in the popover
 struct MeetingListView: View {
     let meetings: [Meeting]
     let nextMeeting: Meeting?
+
+    @State private var copiedMeetingId: String?
 
     private var allDayMeetings: [Meeting] {
         meetings.filter { $0.isAllDay }
@@ -27,8 +30,24 @@ struct MeetingListView: View {
                 ForEach(timedMeetings) { meeting in
                     MeetingRowView(
                         meeting: meeting,
-                        isNext: meeting.id == nextMeeting?.id
+                        isNext: meeting.id == nextMeeting?.id,
+                        copiedMeetingId: $copiedMeetingId
                     )
+                    .contextMenu {
+                        if let joinURL = meeting.joinURL {
+                            Button("Join Meeting") { NSWorkspace.shared.open(joinURL) }
+                            Button("Copy Meeting Link") {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(joinURL.absoluteString, forType: .string)
+                            }
+                            Divider()
+                        }
+                        Button("Copy Meeting Details") { copyMeetingDetails(meeting) }
+                        Divider()
+                        Button("Open Calendar") {
+                            NSWorkspace.shared.open(URL(string: "x-apple-calevent://")!)
+                        }
+                    }
 
                     if meeting.id != timedMeetings.last?.id {
                         Divider()
@@ -37,6 +56,25 @@ struct MeetingListView: View {
                 }
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    private func copyMeetingDetails(_ meeting: Meeting) {
+        var details = meeting.title
+        details += "\n\(meeting.timeRangeString)"
+        if let location = meeting.location, !location.isEmpty {
+            details += "\n\(location)"
+        }
+        if let joinURL = meeting.joinURL {
+            details += "\nJoin: \(joinURL.absoluteString)"
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(details, forType: .string)
+        copiedMeetingId = meeting.id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if copiedMeetingId == meeting.id {
+                copiedMeetingId = nil
+            }
         }
     }
 }
@@ -60,6 +98,7 @@ private struct AllDaySectionView: View {
                     Circle()
                         .fill(.blue.opacity(0.6))
                         .frame(width: 6, height: 6)
+                        .accessibilityHidden(true)
 
                     Text(meeting.title)
                         .font(.caption)
@@ -68,6 +107,8 @@ private struct AllDaySectionView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 2)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("All day: \(meeting.title)")
             }
         }
         .padding(.bottom, 8)
@@ -79,6 +120,7 @@ private struct AllDaySectionView: View {
 struct MeetingRowView: View {
     let meeting: Meeting
     let isNext: Bool
+    @Binding var copiedMeetingId: String?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -97,6 +139,7 @@ struct MeetingRowView: View {
 
             // Status indicator
             statusIndicator
+                .accessibilityHidden(true)
 
             // Meeting details
             VStack(alignment: .leading, spacing: 4) {
@@ -113,15 +156,36 @@ struct MeetingRowView: View {
                         .lineLimit(1)
                 }
 
-                if let joinURL = meeting.joinURL {
-                    Button(action: {
-                        NSWorkspace.shared.open(joinURL)
-                    }) {
-                        Label("Join Meeting", systemImage: "video")
-                            .font(.caption2)
+                if !meeting.hasEnded {
+                    HStack(spacing: 6) {
+                        if let joinURL = meeting.joinURL {
+                            let platform = meetingPlatform(from: joinURL)
+                            Button(action: {
+                                NSWorkspace.shared.open(joinURL)
+                            }) {
+                                Label("Join \(platform.name)", systemImage: platform.icon)
+                                    .font(.caption2)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.mini)
+                            .accessibilityLabel("Join \(platform.name) meeting for \(meeting.title)")
+                        }
+
+                        Button(action: {
+                            copyMeetingDetails(meeting)
+                        }) {
+                            if copiedMeetingId == meeting.id {
+                                Label("Copied!", systemImage: "checkmark")
+                                    .font(.caption2)
+                            } else {
+                                Label("Copy", systemImage: "doc.on.doc")
+                                    .font(.caption2)
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                        .accessibilityLabel("Copy details for \(meeting.title)")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.mini)
                 }
             }
 
@@ -129,8 +193,30 @@ struct MeetingRowView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(isNext ? Color.accentColor.opacity(0.06) : Color.clear)
+        .background(isNext ? Color.accentColor.opacity(0.08) : Color.clear)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(rowAccessibilityLabel)
+        .accessibilityHint(meeting.joinURL != nil ? "Double-click to join meeting" : "")
+        .focusable()
+    }
+
+    private var rowAccessibilityLabel: String {
+        let status: String
+        if meeting.isInProgress {
+            status = "In progress"
+        } else if meeting.hasEnded {
+            status = "Ended"
+        } else if isNext {
+            status = "Next"
+        } else {
+            status = "Upcoming"
+        }
+        let duration = meeting.durationMinutes
+        let durationText = duration >= 60
+            ? "\(duration / 60) hour\(duration / 60 == 1 ? "" : "s")\(duration % 60 > 0 ? " \(duration % 60) minutes" : "")"
+            : "\(duration) minutes"
+        return "\(status): \(meeting.title), \(meeting.timeRangeString), \(durationText)"
     }
 
     private var startTimeString: String {
@@ -186,9 +272,37 @@ struct MeetingRowView: View {
                 .padding(.top, 4)
         } else {
             Circle()
-                .strokeBorder(.gray.opacity(0.3), lineWidth: 1)
+                .strokeBorder(.gray.opacity(0.4), lineWidth: 1)
                 .frame(width: 8, height: 8)
                 .padding(.top, 4)
+        }
+    }
+
+    private func meetingPlatform(from url: URL) -> (name: String, icon: String) {
+        let host = url.host?.lowercased() ?? ""
+        if host.contains("zoom.us") { return ("Zoom", "video.fill") }
+        if host.contains("meet.google.com") { return ("Google Meet", "video.fill") }
+        if host.contains("teams.microsoft.com") { return ("Teams", "video.fill") }
+        if host.contains("webex.com") { return ("Webex", "video.fill") }
+        return ("Meeting", "video.fill")
+    }
+
+    private func copyMeetingDetails(_ meeting: Meeting) {
+        var details = meeting.title
+        details += "\n\(meeting.timeRangeString)"
+        if let location = meeting.location, !location.isEmpty {
+            details += "\n\(location)"
+        }
+        if let joinURL = meeting.joinURL {
+            details += "\nJoin: \(joinURL.absoluteString)"
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(details, forType: .string)
+        copiedMeetingId = meeting.id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if copiedMeetingId == meeting.id {
+                copiedMeetingId = nil
+            }
         }
     }
 }

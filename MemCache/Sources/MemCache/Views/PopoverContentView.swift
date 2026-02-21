@@ -11,12 +11,17 @@ struct PopoverContentView: View {
 
             Divider()
 
+            // Error banner
+            if let error = meetingStore.lastFetchError {
+                FetchErrorBanner(message: error)
+            }
+
             // Content
             if meetingStore.isLoading {
                 LoadingView()
             } else if !meetingStore.calendarAccessGranted {
                 CalendarAccessView(meetingStore: meetingStore)
-            } else if meetingStore.todaysMeetings.isEmpty {
+            } else if meetingStore.todaysMeetings.isEmpty && meetingStore.lastFetchError == nil {
                 EmptyStateView()
             } else {
                 MeetingListView(
@@ -49,6 +54,8 @@ private struct HeaderView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("MemCache, \(todayString())")
     }
 
     private func todayString() -> String {
@@ -121,6 +128,27 @@ private struct EmptyStateView: View {
     }
 }
 
+// MARK: - Fetch Error Banner
+
+private struct FetchErrorBanner: View {
+    let message: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .font(.caption)
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.primary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.12))
+    }
+}
+
 // MARK: - Footer
 
 private struct FooterView: View {
@@ -134,6 +162,7 @@ private struct FooterView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
+            .accessibilityLabel("Quit MemCache")
 
             Spacer()
 
@@ -150,6 +179,7 @@ private struct FooterView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
+            .accessibilityLabel("Open MemCache settings")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

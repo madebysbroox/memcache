@@ -2,8 +2,30 @@ import EventKit
 import Foundation
 
 /// Service for interacting with Apple Calendar via EventKit
-class CalendarService {
+class AppleCalendarService: CalendarServiceProtocol {
     private let eventStore = EKEventStore()
+
+    var providerType: CalendarProviderType { .apple }
+
+    var isAuthenticated: Bool {
+        authorizationStatus == .authorized
+    }
+
+    /// Check current authorization status mapped to CalendarAuthStatus
+    var authorizationStatus: CalendarAuthStatus {
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .authorized, .fullAccess:
+            return .authorized
+        case .denied:
+            return .denied
+        case .notDetermined:
+            return .notDetermined
+        case .restricted, .writeOnly:
+            return .restricted
+        @unknown default:
+            return .notDetermined
+        }
+    }
 
     /// Request calendar access from the user
     func requestAccess() async -> Bool {
@@ -17,11 +39,6 @@ class CalendarService {
             print("MemCache: Calendar access request failed: \(error.localizedDescription)")
             return false
         }
-    }
-
-    /// Check current authorization status
-    var authorizationStatus: EKAuthorizationStatus {
-        EKEventStore.authorizationStatus(for: .event)
     }
 
     /// Fetch today's events from all calendars

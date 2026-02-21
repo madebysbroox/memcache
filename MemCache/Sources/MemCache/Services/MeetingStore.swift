@@ -8,22 +8,42 @@ class MeetingStore: ObservableObject {
     @Published var urgencyLevel: UrgencyLevel = .none
     @Published var calendarAccessGranted: Bool = false
     @Published var isLoading: Bool = false
+    @Published var lastFetchError: String?
 
-    private let calendarService: CalendarService
+    private var calendarServices: [CalendarServiceProtocol]
     private var urgencyTimer: Timer?
+    private let cache = CalendarCache()
 
-    init(calendarService: CalendarService) {
-        self.calendarService = calendarService
+    init(calendarServices: [CalendarServiceProtocol]) {
+        self.calendarServices = calendarServices
+        syncCacheTTL()
+    }
+
+    /// Update the set of active calendar services (e.g. after connect/disconnect).
+    /// Invalidates cache for any providers that were removed.
+    func updateServices(_ services: [CalendarServiceProtocol]) {
+        let oldProviders = Set(calendarServices.map { $0.providerType })
+        let newProviders = Set(services.map { $0.providerType })
+        let removed = oldProviders.subtracting(newProviders)
+        for provider in removed {
+            cache.invalidate(provider: provider)
+        }
+        self.calendarServices = services
     }
 
     /// Request calendar access and fetch initial data
     func requestAccessAndFetch() {
         Task { @MainActor in
             isLoading = true
-            let granted = await calendarService.requestAccess()
-            calendarAccessGranted = granted
 
-            if granted {
+            var anyGranted = false
+            for service in calendarServices {
+                let granted = await service.requestAccess()
+                if granted { anyGranted = true }
+            }
+            calendarAccessGranted = anyGranted
+
+            if anyGranted {
                 refreshMeetings()
             }
             isLoading = false
@@ -31,29 +51,70 @@ class MeetingStore: ObservableObject {
         }
     }
 
-    /// Refresh meetings from calendar
+    /// Refresh meetings from all calendar services.
+    /// Fetches on a background queue to avoid deadlocking the main thread
+    /// (GoogleCalendarService uses synchronous semaphore-based networking).
     func refreshMeetings() {
-        let meetings = calendarService.fetchTodaysMeetings()
+        let services = calendarServices
+        let showAllDay = UserDefaults.standard.object(forKey: "showAllDayEvents") as? Bool ?? true
+        let today = Date()
+        let meetingCache = cache
 
-        Task { @MainActor in
-            // Separate all-day events and timed events
-            let timedMeetings = meetings.filter { !$0.isAllDay }
-            let allDayMeetings = meetings.filter { $0.isAllDay }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var allMeetings: [Meeting] = []
+            var hadFetchError = false
+            for service in services {
+                if let cached = meetingCache.get(provider: service.providerType, date: today) {
+                    allMeetings.append(contentsOf: cached)
+                } else {
+                    let meetings = service.fetchTodaysMeetings()
+                    if meetings.isEmpty && service.providerType != .apple {
+                        // Network-dependent services returning empty may indicate a fetch failure
+                        hadFetchError = true
+                    }
+                    meetingCache.set(meetings, provider: service.providerType, date: today)
+                    allMeetings.append(contentsOf: meetings)
+                }
+            }
+            allMeetings.sort()
 
-            // Show all-day events first, then timed
-            todaysMeetings = allDayMeetings + timedMeetings
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                let timedMeetings = allMeetings.filter { !$0.isAllDay }
 
-            // Find next upcoming meeting (not ended, not all-day)
-            updateNextMeeting()
+                if showAllDay {
+                    let allDayMeetings = allMeetings.filter { $0.isAllDay }
+                    self.todaysMeetings = allDayMeetings + timedMeetings
+                } else {
+                    self.todaysMeetings = timedMeetings
+                }
+
+                if hadFetchError {
+                    self.lastFetchError = "Some calendars couldn't be reached. Showing cached data."
+                } else {
+                    self.lastFetchError = nil
+                }
+
+                self.updateNextMeeting()
+            }
         }
+    }
+
+    /// Force-refresh by invalidating all cached data first (e.g. when popover opens).
+    func forceRefresh() {
+        cache.invalidateAll()
+        refreshMeetings()
+    }
+
+    /// Sync the cache TTL with the user's configured refresh interval.
+    func syncCacheTTL() {
+        let interval = UserDefaults.standard.double(forKey: "refreshInterval")
+        let seconds = interval > 0 ? interval : 60
+        cache.updateTTL(seconds)
     }
 
     /// Update which meeting is "next" and recalculate urgency
     private func updateNextMeeting() {
-        let now = Date()
-
-        // First priority: a meeting that's about to start (not yet started)
-        // Second priority: a meeting currently in progress
         let upcoming = todaysMeetings
             .filter { !$0.isAllDay && !$0.hasEnded }
             .sorted()

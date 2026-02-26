@@ -165,32 +165,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             scheduleRefreshTimer()
         }
 
-        // Reuse the existing window if it's still around
-        if let window = settingsWindow {
-            window.makeKeyAndOrderFront(nil)
-            if #available(macOS 14.0, *) {
-                NSApp.activate()
-            } else {
-                NSApp.activate(ignoringOtherApps: true)
-            }
-            return
-        }
-
-        // Create and show a new settings window
-        let hostingController = NSHostingController(rootView: SettingsView())
-        let window = NSWindow(contentViewController: hostingController)
-        window.title = "MemCache Settings"
-        window.styleMask = [.titled, .closable]
-        window.center()
-        window.isReleasedWhenClosed = false
-        settingsWindow = window
-
-        window.makeKeyAndOrderFront(nil)
+        // Activate the app first so the window can actually come to the front.
+        // Menu bar-only apps (LSUIElement) are not the active app by default,
+        // so without this the window appears behind other apps' windows.
         if #available(macOS 14.0, *) {
             NSApp.activate()
         } else {
             NSApp.activate(ignoringOtherApps: true)
         }
+
+        // Create a new settings window if needed
+        if settingsWindow == nil {
+            let hostingController = NSHostingController(rootView: SettingsView())
+            let window = NSWindow(contentViewController: hostingController)
+            window.title = "MemCache Settings"
+            window.styleMask = [.titled, .closable]
+            window.center()
+            window.isReleasedWhenClosed = false
+            settingsWindow = window
+        }
+
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - Smooth Breathing Animation

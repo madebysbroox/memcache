@@ -5,6 +5,7 @@ import AppKit
 struct MeetingListView: View {
     let meetings: [Meeting]
     let nextMeeting: Meeting?
+    var meetingSummaries: [String: String] = [:]
 
     @State private var copiedMeetingId: String?
 
@@ -31,6 +32,7 @@ struct MeetingListView: View {
                     MeetingRowView(
                         meeting: meeting,
                         isNext: meeting.id == nextMeeting?.id,
+                        aiSummary: meetingSummaries[meeting.id],
                         copiedMeetingId: $copiedMeetingId
                     )
                     .contextMenu {
@@ -120,6 +122,7 @@ private struct AllDaySectionView: View {
 struct MeetingRowView: View {
     let meeting: Meeting
     let isNext: Bool
+    var aiSummary: String?
     @Binding var copiedMeetingId: String?
 
     var body: some View {
@@ -154,6 +157,13 @@ struct MeetingRowView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                }
+
+                if let summary = aiSummary {
+                    Label(summary, systemImage: "sparkles")
+                        .font(.caption2)
+                        .foregroundStyle(.purple)
+                        .lineLimit(2)
                 }
 
                 if !meeting.hasEnded {

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @AppStorage("refreshInterval") private var refreshInterval: Double = 60
     @AppStorage("showAllDayEvents") private var showAllDayEvents: Bool = true
     @AppStorage("launchAtLogin") private var launchAtLogin: Bool = false
+    @AppStorage("aiInsightsEnabled") private var aiInsightsEnabled: Bool = true
     @ObservedObject private var accountManager = CalendarAccountManager.shared
 
     var body: some View {
@@ -13,7 +14,8 @@ struct SettingsView: View {
             GeneralSettingsView(
                 refreshInterval: $refreshInterval,
                 showAllDayEvents: $showAllDayEvents,
-                launchAtLogin: $launchAtLogin
+                launchAtLogin: $launchAtLogin,
+                aiInsightsEnabled: $aiInsightsEnabled
             )
             .tabItem {
                 Label("General", systemImage: "gear")
@@ -39,6 +41,7 @@ private struct GeneralSettingsView: View {
     @Binding var refreshInterval: Double
     @Binding var showAllDayEvents: Bool
     @Binding var launchAtLogin: Bool
+    @Binding var aiInsightsEnabled: Bool
 
     var body: some View {
         Form {
@@ -50,6 +53,28 @@ private struct GeneralSettingsView: View {
                     Text("1 minute").tag(60.0)
                     Text("2 minutes").tag(120.0)
                     Text("5 minutes").tag(300.0)
+                }
+            }
+
+            Section("Intelligence") {
+                if FoundationModelService.shared.isAvailable {
+                    Toggle("AI Insights", isOn: $aiInsightsEnabled)
+                    Text("Daily briefings, meeting summaries, and conflict detection powered by on-device Apple Intelligence.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("AI Insights unavailable")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                            Text("Requires macOS 26 with Apple Intelligence enabled on Apple Silicon.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
                 }
             }
 

@@ -252,12 +252,10 @@ private struct FooterView: View {
             Spacer()
 
             Button(action: {
-                if #available(macOS 14.0, *) {
-                    NSApp.activate()
-                } else {
-                    NSApp.activate(ignoringOtherApps: true)
-                }
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("MemCacheOpenSettings"),
+                    object: nil
+                )
             }) {
                 Label("Settings", systemImage: "gear")
                     .font(.caption)

@@ -9,10 +9,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "MemCache",
-            path: "Sources/MemCache",
-            resources: [
-                .process("../Resources")
-            ]
+            path: "Sources/MemCache"
         )
     ]
 )

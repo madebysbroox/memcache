@@ -1,40 +1,11 @@
 import Foundation
 
-#if canImport(FoundationModels)
-import FoundationModels
-
-@available(macOS 26, *)
-@Generable
-struct DailyBriefing {
-    @Guide(description: "A concise, friendly 1-2 sentence summary of today's meeting schedule highlighting key meetings, free time blocks, and overall busyness")
-    var summary: String
-}
-
-@available(macOS 26, *)
-@Generable
-struct MeetingInsight {
-    @Guide(description: "A brief 1-line summary distilling the meeting's purpose or key agenda from its description and notes")
-    var summary: String
-}
-
-@available(macOS 26, *)
-@Generable
-struct SmartTitle {
-    @Guide(description: "An intelligently abbreviated version of the meeting title that preserves meaning within the character limit")
-    var abbreviated: String
-}
-
-@available(macOS 26, *)
-@Generable
-struct ConflictInsight {
-    @Guide(description: "A short, human-friendly description of the scheduling conflict and a practical suggestion")
-    var description: String
-}
-#endif
-
 /// Service that wraps Apple's on-device Foundation Models framework for AI-powered features.
 /// All features run entirely on-device — no network, no API keys, no privacy concerns.
 /// Gracefully falls back to nil results on macOS < 26 or unsupported hardware.
+///
+/// Uses plain text generation (session.respond(to:)) rather than @Generable structured output,
+/// because the FoundationModelsMacros plugin is only available in Xcode builds, not `swift build`.
 final class FoundationModelService {
     static let shared = FoundationModelService()
 
@@ -77,7 +48,8 @@ final class FoundationModelService {
             let prompt = """
             You are a helpful calendar assistant. Summarize this person's schedule for today \
             in a concise, friendly way. Mention how busy they are, highlight important meetings, \
-            and note any free time gaps. Keep it to 1-2 sentences.
+            and note any free time gaps. Keep it to 1-2 sentences. Reply with only the summary, \
+            no extra text.
 
             Today's meetings:
             \(schedule)\(allDayNote)
@@ -85,8 +57,9 @@ final class FoundationModelService {
 
             do {
                 let session = LanguageModelSession()
-                let result = try await session.respond(to: prompt, generating: DailyBriefing.self)
-                return result.summary
+                let response = try await session.respond(to: prompt)
+                let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                return text.isEmpty ? nil : text
             } catch {
                 return nil
             }
@@ -105,7 +78,8 @@ final class FoundationModelService {
             guard let notes = meeting.notes, !notes.isEmpty else { return nil }
 
             let prompt = """
-            Summarize what this meeting is about in one short sentence based on its details.
+            Summarize what this meeting is about in one short sentence based on its details. \
+            Reply with only the summary sentence, no extra text.
 
             Title: \(meeting.title)
             Notes/Description:
@@ -114,8 +88,9 @@ final class FoundationModelService {
 
             do {
                 let session = LanguageModelSession()
-                let result = try await session.respond(to: prompt, generating: MeetingInsight.self)
-                return result.summary
+                let response = try await session.respond(to: prompt)
+                let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                return text.isEmpty ? nil : text
             } catch {
                 return nil
             }
@@ -138,17 +113,17 @@ final class FoundationModelService {
             let prompt = """
             Abbreviate this meeting title to fit within \(maxLength) characters while preserving \
             its meaning. Use common abbreviations (Q1, Rev, Sync, etc). Do not use ellipsis. \
-            Return only the abbreviated title.
+            Reply with only the abbreviated title, nothing else.
 
             Title: \(title)
             """
 
             do {
                 let session = LanguageModelSession()
-                let result = try await session.respond(to: prompt, generating: SmartTitle.self)
-                let abbreviated = result.abbreviated
+                let response = try await session.respond(to: prompt)
+                let abbreviated = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
                 // Ensure it actually fits; fall back if the model overshot
-                if abbreviated.count <= maxLength {
+                if !abbreviated.isEmpty && abbreviated.count <= maxLength {
                     return abbreviated
                 }
                 return nil
@@ -176,7 +151,8 @@ final class FoundationModelService {
 
             let prompt = """
             Two meetings overlap by \(overlapMinutes) minutes. Describe the conflict briefly \
-            and suggest a practical resolution in one sentence.
+            and suggest a practical resolution in one sentence. Reply with only that sentence, \
+            no extra text.
 
             Meeting 1: "\(meeting1.title)" (\(Self.shortTime(meeting1.startDate))–\(Self.shortTime(meeting1.endDate)))
             Meeting 2: "\(meeting2.title)" (\(Self.shortTime(meeting2.startDate))–\(Self.shortTime(meeting2.endDate)))
@@ -184,8 +160,9 @@ final class FoundationModelService {
 
             do {
                 let session = LanguageModelSession()
-                let result = try await session.respond(to: prompt, generating: ConflictInsight.self)
-                return result.description
+                let response = try await session.respond(to: prompt)
+                let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                return text.isEmpty ? nil : text
             } catch {
                 return nil
             }

@@ -12,6 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var noMeetingsRemaining: Bool = false
     private var cancellables = Set<AnyCancellable>()
     private var eventMonitor: Any?
+    private var settingsWindow: NSWindow?
 
     // MARK: - Smooth animation state
     private var animationTimer: Timer?
@@ -163,14 +164,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             isPopoverOpen = false
             scheduleRefreshTimer()
         }
-        // Brief delay so the popover finishes dismissing before the settings window appears
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+
+        // Reuse the existing window if it's still around
+        if let window = settingsWindow {
+            window.makeKeyAndOrderFront(nil)
             if #available(macOS 14.0, *) {
                 NSApp.activate()
             } else {
                 NSApp.activate(ignoringOtherApps: true)
             }
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            return
+        }
+
+        // Create and show a new settings window
+        let hostingController = NSHostingController(rootView: SettingsView())
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "MemCache Settings"
+        window.styleMask = [.titled, .closable]
+        window.center()
+        window.isReleasedWhenClosed = false
+        settingsWindow = window
+
+        window.makeKeyAndOrderFront(nil)
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 

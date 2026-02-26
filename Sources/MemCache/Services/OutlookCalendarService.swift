@@ -165,7 +165,7 @@ final class OutlookCalendarService: NSObject, CalendarServiceProtocol {
             }
 
             session.presentationContextProvider = self
-            session.prefersEphemeralWebBrowserSession = false
+            session.prefersEphemeralWebBrowserSession = true
 
             DispatchQueue.main.async {
                 session.start()

@@ -20,6 +20,17 @@
     <string>13.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.memcache.app.msauth</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>msauth.com.memcache.app</string>
+            </array>
+        </dict>
+    </array>
     <key>NSCalendarsUsageDescription</key>
     <string>MemCache needs access to your calendar to display upcoming meetings in the menu bar.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>

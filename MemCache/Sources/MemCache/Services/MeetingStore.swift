@@ -10,9 +10,17 @@ class MeetingStore: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var lastFetchError: String?
 
+    // MARK: - AI Insights (Foundation Models)
+    @Published var dailyBriefing: String?
+    @Published var isGeneratingBriefing: Bool = false
+    @Published var meetingSummaries: [String: String] = [:]  // meetingID -> summary
+    @Published var conflictDescriptions: [String] = []
+
     private var calendarServices: [CalendarServiceProtocol]
     private var urgencyTimer: Timer?
     private let cache = CalendarCache()
+    private let fmService = FoundationModelService.shared
+    private var hasFetchedBriefing = false
 
     init(calendarServices: [CalendarServiceProtocol]) {
         self.calendarServices = calendarServices
@@ -96,6 +104,7 @@ class MeetingStore: ObservableObject {
                 }
 
                 self.updateNextMeeting()
+                self.generateAIInsights()
             }
         }
     }
@@ -103,7 +112,87 @@ class MeetingStore: ObservableObject {
     /// Force-refresh by invalidating all cached data first (e.g. when popover opens).
     func forceRefresh() {
         cache.invalidateAll()
+        resetAIInsights()
         refreshMeetings()
+    }
+
+    // MARK: - AI Insights (Foundation Models)
+
+    /// Whether AI-powered insights are available on this system.
+    var aiInsightsAvailable: Bool {
+        fmService.isAvailable && (UserDefaults.standard.object(forKey: "aiInsightsEnabled") as? Bool ?? true)
+    }
+
+    /// Generate AI insights after meetings are loaded.
+    /// Called automatically after refreshMeetings when AI is available.
+    func generateAIInsights() {
+        guard aiInsightsAvailable else { return }
+
+        let meetings = todaysMeetings
+        guard !meetings.isEmpty else { return }
+
+        // Generate daily briefing (once per refresh cycle)
+        if !hasFetchedBriefing {
+            isGeneratingBriefing = true
+            Task { @MainActor in
+                let briefing = await fmService.generateDailyBriefing(meetings: meetings)
+                self.dailyBriefing = briefing
+                self.isGeneratingBriefing = false
+                self.hasFetchedBriefing = true
+            }
+        }
+
+        // Generate summaries for meetings that have notes
+        let meetingsWithNotes = meetings.filter { $0.notes != nil && !($0.notes?.isEmpty ?? true) }
+        for meeting in meetingsWithNotes {
+            guard meetingSummaries[meeting.id] == nil else { continue }
+            Task { @MainActor in
+                if let summary = await fmService.summarizeMeeting(meeting) {
+                    self.meetingSummaries[meeting.id] = summary
+                }
+            }
+        }
+
+        // Detect and describe conflicts
+        detectConflicts(in: meetings)
+    }
+
+    /// Detect overlapping timed meetings and generate conflict descriptions.
+    private func detectConflicts(in meetings: [Meeting]) {
+        let timed = meetings.filter { !$0.isAllDay && !$0.hasEnded }.sorted()
+        var conflicts: [(Meeting, Meeting)] = []
+
+        for i in 0..<timed.count {
+            for j in (i + 1)..<timed.count {
+                if timed[i].endDate > timed[j].startDate {
+                    conflicts.append((timed[i], timed[j]))
+                }
+            }
+        }
+
+        guard !conflicts.isEmpty else {
+            conflictDescriptions = []
+            return
+        }
+
+        for (m1, m2) in conflicts {
+            Task { @MainActor in
+                if let description = await fmService.describeConflict(meeting1: m1, meeting2: m2) {
+                    if !self.conflictDescriptions.contains(description) {
+                        self.conflictDescriptions.append(description)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Reset AI insights (e.g. when day changes or force-refresh).
+    func resetAIInsights() {
+        dailyBriefing = nil
+        isGeneratingBriefing = false
+        meetingSummaries.removeAll()
+        conflictDescriptions.removeAll()
+        hasFetchedBriefing = false
     }
 
     /// Sync the cache TTL with the user's configured refresh interval.

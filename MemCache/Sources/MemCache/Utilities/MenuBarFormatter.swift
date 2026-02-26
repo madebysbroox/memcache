@@ -10,8 +10,13 @@ struct MenuBarFormatter {
         let urgencyLevel: UrgencyLevel
     }
 
-    /// Format a meeting for menu bar display
-    static func format(meeting: Meeting?, urgencyLevel: UrgencyLevel) -> DisplayResult {
+    /// Format a meeting for menu bar display.
+    /// When `liveCountdown` is true, shows mm:ss countdown for imminent/soon meetings.
+    static func format(
+        meeting: Meeting?,
+        urgencyLevel: UrgencyLevel,
+        liveCountdown: Bool = false
+    ) -> DisplayResult {
         guard let meeting = meeting else {
             return DisplayResult(text: "No meetings", urgencyLevel: .none)
         }
@@ -20,7 +25,7 @@ struct MenuBarFormatter {
             return formatInProgress(meeting: meeting)
         }
 
-        return formatUpcoming(meeting: meeting, urgencyLevel: urgencyLevel)
+        return formatUpcoming(meeting: meeting, urgencyLevel: urgencyLevel, liveCountdown: liveCountdown)
     }
 
     /// Format an in-progress meeting
@@ -33,12 +38,30 @@ struct MenuBarFormatter {
         )
     }
 
-    /// Format an upcoming meeting
-    private static func formatUpcoming(meeting: Meeting, urgencyLevel: UrgencyLevel) -> DisplayResult {
+    /// Format an upcoming meeting.
+    /// With `liveCountdown`, shows "4:32" (mm:ss) instead of "4m" for imminent/soon meetings.
+    private static func formatUpcoming(
+        meeting: Meeting,
+        urgencyLevel: UrgencyLevel,
+        liveCountdown: Bool = false
+    ) -> DisplayResult {
         let time = formatTime(meeting.startDate)
-        let minutesAway = meeting.minutesUntilStart
+        let secondsAway = Int(meeting.startDate.timeIntervalSinceNow)
+        let minutesAway = secondsAway / 60
 
-        // For imminent meetings, show countdown instead of time
+        // Live countdown for imminent and soon meetings (< 15 minutes)
+        if liveCountdown && secondsAway > 0 && minutesAway < 15 {
+            let mins = secondsAway / 60
+            let secs = secondsAway % 60
+            let countdown = String(format: "%d:%02d", mins, secs)
+            let title = truncateTitle(meeting.title, maxLength: maxMenuBarLength - countdown.count - 3)
+            return DisplayResult(
+                text: "\(countdown) \u{2022} \(title)",
+                urgencyLevel: urgencyLevel
+            )
+        }
+
+        // For imminent meetings without live countdown, show minutes
         if minutesAway <= 5 && minutesAway >= 0 {
             let title = truncateTitle(meeting.title, maxLength: maxMenuBarLength - 10)
             let label = minutesAway == 0 ? "NOW" : "\(minutesAway)m"

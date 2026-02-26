@@ -16,6 +16,18 @@ struct PopoverContentView: View {
                 FetchErrorBanner(message: error)
             }
 
+            // AI Daily Briefing
+            if meetingStore.isGeneratingBriefing {
+                BriefingLoadingView()
+            } else if let briefing = meetingStore.dailyBriefing {
+                DailyBriefingView(briefing: briefing)
+            }
+
+            // Conflict alerts
+            if !meetingStore.conflictDescriptions.isEmpty {
+                ConflictBanner(descriptions: meetingStore.conflictDescriptions)
+            }
+
             // Content
             if meetingStore.isLoading {
                 LoadingView()
@@ -26,7 +38,8 @@ struct PopoverContentView: View {
             } else {
                 MeetingListView(
                     meetings: meetingStore.todaysMeetings,
-                    nextMeeting: meetingStore.nextMeeting
+                    nextMeeting: meetingStore.nextMeeting,
+                    meetingSummaries: meetingStore.meetingSummaries
                 )
             }
 
@@ -146,6 +159,78 @@ private struct FetchErrorBanner: View {
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.orange.opacity(0.12))
+    }
+}
+
+// MARK: - Daily Briefing
+
+private struct DailyBriefingView: View {
+    let briefing: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(.purple)
+                .font(.caption)
+            Text(briefing)
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.purple.opacity(0.06))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("AI briefing: \(briefing)")
+    }
+}
+
+private struct BriefingLoadingView: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(.purple.opacity(0.5))
+                .font(.caption)
+            Text("Generating daily briefing...")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            ProgressView()
+                .controlSize(.mini)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.purple.opacity(0.03))
+    }
+}
+
+// MARK: - Conflict Banner
+
+private struct ConflictBanner: View {
+    let descriptions: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(descriptions, id: \.self) { desc in
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.2")
+                        .foregroundStyle(.red)
+                        .font(.caption2)
+                    Text(desc)
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.red.opacity(0.06))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Schedule conflict: \(descriptions.joined(separator: ". "))")
     }
 }
 

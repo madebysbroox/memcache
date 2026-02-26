@@ -74,6 +74,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        // Listen for "open settings" requests from the popover
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleOpenSettings),
+            name: NSNotification.Name("MemCacheOpenSettings"),
+            object: nil
+        )
+
         // Initial fetch
         meetingStore.requestAccessAndFetch()
 
@@ -145,6 +153,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             meetingStore.forceRefresh()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             scheduleRefreshTimer()
+        }
+    }
+
+    @objc private func handleOpenSettings() {
+        // Close the popover first — it's .transient and will fight the settings window
+        if popover.isShown {
+            popover.performClose(nil)
+            isPopoverOpen = false
+            scheduleRefreshTimer()
+        }
+        // Brief delay so the popover finishes dismissing before the settings window appears
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            if #available(macOS 14.0, *) {
+                NSApp.activate()
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+            }
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         }
     }
 

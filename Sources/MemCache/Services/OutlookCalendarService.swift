@@ -28,6 +28,8 @@ final class OutlookCalendarService: NSObject, CalendarServiceProtocol {
     // MARK: - State
 
     private var tokens: OutlookTokens?
+    /// Retained for the lifetime of the OAuth flow so it isn't deallocated mid-presentation.
+    private var authSession: ASWebAuthenticationSession?
 
     // MARK: - CalendarServiceProtocol
 
@@ -147,7 +149,9 @@ final class OutlookCalendarService: NSObject, CalendarServiceProtocol {
             let session = ASWebAuthenticationSession(
                 url: authURL,
                 callbackURLScheme: scheme
-            ) { callbackURL, error in
+            ) { [weak self] callbackURL, error in
+                self?.authSession = nil
+
                 if let error = error {
                     print("MemCache: Outlook auth session error: \(error.localizedDescription)")
                     continuation.resume(returning: nil)
@@ -166,6 +170,9 @@ final class OutlookCalendarService: NSObject, CalendarServiceProtocol {
 
             session.presentationContextProvider = self
             session.prefersEphemeralWebBrowserSession = true
+
+            // Retain the session so it isn't deallocated before the auth window appears
+            self.authSession = session
 
             DispatchQueue.main.async {
                 session.start()

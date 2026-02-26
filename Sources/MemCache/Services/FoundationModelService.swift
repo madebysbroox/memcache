@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
+
 /// Service that wraps Apple's on-device Foundation Models framework for AI-powered features.
 /// All features run entirely on-device — no network, no API keys, no privacy concerns.
 /// Gracefully falls back to nil results on macOS < 26 or unsupported hardware.
